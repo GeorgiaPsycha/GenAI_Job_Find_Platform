@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18-trixie
+    container_name: genai-postgres
+    environment:
+      POSTGRES_DB: genai
+      POSTGRES_USER: genai
+      POSTGRES_PASSWORD: genai
+    ports:
+      - "5433:5432"
+    volumes:
+      - genai-25-11-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genai -d genai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway-migrate:
+    image: maven:3.9-eclipse-temurin-25
+    container_name: genai-flyway
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /project
+    volumes:
+      - .:/project       # mount your repo into the container
+    command: >
+      mvn clean install flyway:migrate -Denv=local -Durl=jdbc:postgresql://postgres:5432/genai -Duser=genai -Dpassword=genai
+
+volumes:
+  genai-25-11-pgdata:

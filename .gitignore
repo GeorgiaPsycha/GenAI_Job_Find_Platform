@@ -1,0 +1,11 @@
+# IntelliJ / IDE
+.idea/
+*.iml
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
