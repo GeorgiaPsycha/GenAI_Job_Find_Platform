@@ -35,11 +35,23 @@ public class DocumentService {
     public Document createDocument(Document document) {
         document.setStatus("active");
         // create document
+        // 2. Save the Parent Document (Job Post)
+        // Προσοχή: Το document πρέπει να έχει account_id από τον Controller
         document = documentRepository.save(document);
 
+        // 3. Prepare Content for Indexing (Job Description + Metadata)
+        // Συνδυάζουμε τα πεδία για να "καταλαβαίνει" το AI και την τοποθεσία/εταιρεία
+        String contentToIndex = String.format(
+                "Title: %s\nCompany: %s\nLocation: %s\nSeniority: %s\n\nDescription:\n%s",
+                document.getTitle(),
+                document.getCompany() != null ? document.getCompany() : "",
+                document.getLocation() != null ? document.getLocation() : "",
+                document.getSeniority() != null ? document.getSeniority() : "",
+                document.getBody()
+        );
 
         // index document
-        List<DocumentSection> documentSections = indexDocument(document, document.getBody());
+        List<DocumentSection> documentSections = indexDocument(document, contentToIndex);
 
         return document;
 
@@ -54,8 +66,8 @@ public class DocumentService {
         agent.setBehavior("""
                 You are a DB Admin, this is a Postgres DB, users will ask you stuff, and you will run as many queries as needed in the DB to achive the goal. You dont know the schema, run queries to find it.
                 """);
-        agent.setLlmModel("gpt-5-mini");
-        agent.setEmbeddingsModel("text-embedding-3-small");
+        agent.setLlmModel("llama3.1:latest");
+        agent.setEmbeddingsModel("nomic-embed-text:latest");
         agent.setTemperature(1.0);
         agent.setMaxTokens(1000);
 
@@ -68,14 +80,19 @@ public class DocumentService {
             MessageDTO message = new MessageDTO();
             message.setRole("user");
             message.setContent(section);
+            // Κλήση στο OpenAI για Embedding
+            // (Βεβαιώσου ότι στο application.properties έχεις βάλει το llms.openai.key)
             EmbeddingResponse embeddingResponse = completionsApiService.getEmbedding(agent, message);
 
+            // Αποθήκευση του Section με το Vector
             DocumentSection documentSection = new DocumentSection();
             documentSection.setDocument(document);
             documentSection.setSectionIndex(i++);
             documentSection.setContent(section);
-            documentSection.setEmbedding(embeddingResponse.getData().get(0).getEmbedding());
-
+// Παίρνουμε το vector από το response
+            if (embeddingResponse != null && !embeddingResponse.getData().isEmpty()) {
+                documentSection.setEmbedding(embeddingResponse.getData().get(0).getEmbedding());
+            }
             documentSectionRepository.save(documentSection);
             documentSections.add(documentSection);
         }

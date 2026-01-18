@@ -29,11 +29,11 @@ public class CompletionsApiService {
     }
 
     public ChatCompletionResponse getCompletion(Agent agent, List<MessageDTO> messages, List<JsonNode> tools) {
-        String url = "https://api.openai.com/v1/chat/completions";
+        String url = "http://localhost:11434/v1/chat/completions";
         return getCompletion(url, agent.getLlmModel(), messages, agent.getTemperature(), agent.getMaxTokens(), agent.getBehavior(), tools);
     }
     public EmbeddingResponse getEmbedding(Agent agent, MessageDTO messages) {
-        String url = "https://api.openai.com/v1/embeddings";
+        String url = "http://localhost:11434/v1/embeddings";
         return this.getEmbedding(url, agent.getEmbeddingsModel(), messages);
     }
 
