@@ -1,6 +1,10 @@
 package dev.ctrlspace.genai2506.genaibe.models.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.*;
 
 import java.time.Instant;
@@ -8,6 +12,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "document")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class Document {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -28,6 +36,18 @@ public class Document {
     @Column(name = "body", nullable = false, length = Integer.MAX_VALUE)
     private String body;
 
+    @Column(name = "company", length = Integer.MAX_VALUE)
+    private String company;
+
+    @Column(name = "location", length = Integer.MAX_VALUE)
+    private String location;
+
+    @Column(name = "seniority", length = Integer.MAX_VALUE)
+    private String seniority;
+
+    @Column(name = "tags", length = Integer.MAX_VALUE)
+    private String tags;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -43,77 +63,5 @@ public class Document {
     @ColumnDefault("'active'")
     @Column(name = "status", nullable = false, length = Integer.MAX_VALUE)
     private String status;
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public Account getAccount() {
-        return account;
-    }
-
-    public void setAccount(Account account) {
-        this.account = account;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public void setSummary(String summary) {
-        this.summary = summary;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
-    }
-
-    public User getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(User createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
 
 }
