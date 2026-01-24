@@ -33,6 +33,27 @@ public class SearchTool implements Tool {
     }
 
     @Override
+    public String getDescription() {
+        return "Performs a semantic search on job postings and documents. Use this tool when the user asks to find jobs, search for specific roles, or retrieve information about the company.";
+    }
+
+    @Override
+    public String getParameters() {
+        return """
+            {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The natural language search query (e.g. 'Java developer jobs in Athens')."
+                    }
+                },
+                "required": ["query"]
+            }
+            """;
+    }
+
+    @Override
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage originalMessage) throws Exception {
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
         String query = arguments.get("query").asText();

@@ -5,6 +5,7 @@ import dev.genai.genaibe.models.dtos.completions.MessageDTO;
 import dev.genai.genaibe.models.entities.Agent;
 import dev.genai.genaibe.models.entities.ChatMessage;
 import dev.genai.genaibe.models.entities.DocumentSection;
+import dev.genai.genaibe.tools.ApplyTool;
 import dev.genai.genaibe.tools.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ public class AgentService {
 
     private final DocumentService documentService;
     private final ReRankingApiService reRankingApiService;
+    private final ApplyTool applyTool;
     Logger logger = LoggerFactory.getLogger(AgentService.class);
 
     private final CompletionsApiService completionsApiService;
@@ -77,7 +79,7 @@ public class AgentService {
             """;
 
     @Autowired
-    public AgentService(CompletionsApiService completionsApiService, ObjectMapper objectMapper, List<Tool> toolsList, DocumentService documentService, ReRankingApiService reRankingApiService) throws Exception {
+    public AgentService(CompletionsApiService completionsApiService, ObjectMapper objectMapper, List<Tool> toolsList, DocumentService documentService, ReRankingApiService reRankingApiService, ApplyTool applyTool) throws Exception {
         this.completionsApiService = completionsApiService;
 
 
@@ -93,6 +95,7 @@ public class AgentService {
         );
         this.documentService = documentService;
         this.reRankingApiService = reRankingApiService;
+        this.applyTool = applyTool;
     }
 
     public MessageDTO processMessage(ChatMessage message) {
@@ -120,9 +123,6 @@ public class AgentService {
                 .role("user")
                 .content(contextBuilder.toString())
                 .build());
-
-
-
 
 
         ChatCompletionResponse response;
@@ -173,6 +173,8 @@ public class AgentService {
         return toolExecutionMap.get(toolCall.getFunction().getName()).execute(toolCall, agent, message);
 
     }
+
+
 
 
 }

@@ -28,6 +28,28 @@ public class SqlRunnerTool implements Tool {
     }
 
     @Override
+    public String getDescription() {
+        return "Executes a SQL SELECT query against the database to retrieve information about users, jobs, or applications. Use this to inspect the database schema or data.";
+    }
+
+    @Override
+    public String getParameters() {
+        // Εδώ περιγράφουμε στο LLM ότι περιμένουμε ένα πεδίο "query"
+        return """
+            {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The SQL SELECT query to execute."
+                    }
+                },
+                "required": ["query"]
+            }
+            """;
+    }
+
+    @Override
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage message) throws Exception {
 
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
