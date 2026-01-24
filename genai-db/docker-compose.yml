@@ -28,5 +28,14 @@ services:
     command: >
       mvn clean install flyway:migrate -Denv=local -Durl=jdbc:postgresql://postgres:5432/genai -Duser=genai -Dpassword=genai
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: genai-ollama
+    ports:
+      - "11434:11434" # Ανοίγουμε την πόρτα για να το βλέπει το Backend
+    volumes:
+      - ollama_data:/root/.ollama # Εδώ αποθηκεύονται τα μοντέλα μόνιμα
+
 volumes:
   genai-25-11-pgdata:
+  ollama_data:

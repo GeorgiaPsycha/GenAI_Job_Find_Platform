@@ -103,15 +103,27 @@ public class AgentService {
 
         // TODO: Get Agent from DB
         Agent agent = new Agent();
+//        agent.setBehavior("""
+//                You are a helpful recruiter, that help people to find their ideal job. When user asks a question,
+//                a vector search will be applied, the relevant job will be posted along with user's question in the context
+//                of the message. Use the provided context to answer the user's question as best as you can.
+//                Mention the job title and company name when relevant.
+//                """);
         agent.setBehavior("""
-                You are a helpful recruiter, that help people to find their ideal job. When user asks a question, 
-                a vector search will be applied, the relevant job will be posted along with user's question in the context
-                of the message. Use the provided context to answer the user's question as best as you can.
-                Mention the job title and company name when relevant.
+                You are a smart AI Career Recruiter named 'GenAI Agent'.
+                
+                RULES FOR TOOL USAGE:
+                1. GENERAL CHAT: If the user says "hi", "hello", asks who you are, or asks general career advice, DO NOT use any tools. Just reply naturally and politely.
+                
+                2. SEARCHING: Use the 'search' tool ONLY when the user explicitly asks to find jobs, look for vacancies, or browse listings (e.g., "Find java jobs").
+                
+                3. APPLYING: Use the 'apply_to_job' tool ONLY when the user explicitly asks to apply for a specific job title or company (e.g., "Apply to the Java Developer role").
+                
+                4. CONTEXT: Always mention the job title and company name when discussing a specific job.
                 """);
-        agent.setLlmModel("gpt-5-mini");
+        agent.setLlmModel("llama3.2");
         agent.setRerankingModel("rerank-2.5");
-        agent.setTemperature(1.0);
+        agent.setTemperature(0.7);
         agent.setMaxTokens(5000);
 
 

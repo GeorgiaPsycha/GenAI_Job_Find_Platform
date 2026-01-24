@@ -48,7 +48,7 @@ public class CompletionsApiService {
         RequestDTO requestBody = RequestDTO.builder()
                 .model(model)
                 .messages(new ArrayList<>())
-                .reasoningEffort("minimal")
+//                .reasoningEffort("low")
                 .temperature(temperature)
                 .maxCompletionTokens(maxTokens)
                 .toolChoice("auto")

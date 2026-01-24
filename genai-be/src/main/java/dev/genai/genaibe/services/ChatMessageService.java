@@ -47,7 +47,9 @@ public class ChatMessageService {
             newThread.setTitle(title);
 
             newThread.setStatus("active");
-            newThread.setCreatedAt(Instant.now());
+            Instant now = Instant.now();
+            newThread.setCreatedAt(now);
+            newThread.setUpdatedAt(now);
 
             // 3. Αποθηκεύουμε το Thread στη βάση ΠΡΙΝ το μήνυμα
             newThread = chatThreadRepository.save(newThread);
