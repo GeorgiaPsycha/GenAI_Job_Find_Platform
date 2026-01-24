@@ -46,6 +46,7 @@ export default function Home() {
 
   // State για τον τρέχοντα χρήστη (για το UI)
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState([
@@ -65,6 +66,7 @@ export default function Home() {
     // Έλεγχος αν υπάρχει token
     const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
+    const storedRole = localStorage.getItem('role');
 
     if (!token) {
       // Αν δεν υπάρχει, πίσω στο Login
@@ -72,6 +74,7 @@ export default function Home() {
     } else {
       // Αν υπάρχει, κρατάμε το User ID για να ξεχωρίζουμε τα μηνύματά μας στο chat
       setCurrentUserId(storedUserId);
+      setUserRole(storedRole);
     }
   }, [router]);
 
@@ -175,7 +178,6 @@ export default function Home() {
     }
   };
 
-  // ... (Υπόλοιπος κώδικας Search παραμένει ίδιος) ...
   useEffect(() => {
     if (!searchInput.trim()) {
       if (!semanticSearchInput.trim()) setFilteredItems(documents);
@@ -217,9 +219,13 @@ export default function Home() {
 
            <div className={styles.sidebar}>
                <div style={{ marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   <Link href="/admin" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em' }}>
+                 {userRole === 'admin' ? (
+                     <Link href="/admin" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em' }}>
                        Admin Panel
-                   </Link>
+                     </Link>
+                 ) : (
+                     <span style={{ color: '#666', fontSize: '0.9em', fontWeight: 'bold' }}>Job Candidate</span>
+                 )}
                    {/* Logout Button */}
                    <button
                     onClick={() => { localStorage.clear(); router.push('/login'); }}

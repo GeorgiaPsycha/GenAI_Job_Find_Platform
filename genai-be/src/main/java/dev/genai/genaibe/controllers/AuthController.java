@@ -3,6 +3,7 @@ package dev.genai.genaibe.controllers;
 import dev.genai.genaibe.models.entities.User;
 import dev.genai.genaibe.repositories.UserRepository;
 import dev.genai.genaibe.services.JwtService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,17 +24,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        // Αγνοούμε τον ρόλο στον έλεγχο για απλότητα, αρκεί να υπάρχει το email
+        String requestedRole = request.get("role");
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String actualRole = (user.getRole() != null) ? user.getRole() : "user";
+
+        if (!actualRole.equalsIgnoreCase(requestedRole)) {
+            // Επιστρέφουμε 403 Forbidden ή 401 Unauthorized
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access Denied: Incorrect role selected for this email."));
+        }
         String token = jwtService.generateToken(user);
 
         return ResponseEntity.ok(Map.of(
                 "token", token,
                 "userId", user.getId(),
-                "email", user.getEmail()
+                "email", user.getEmail(),
+                "role", actualRole
         ));
     }
 }

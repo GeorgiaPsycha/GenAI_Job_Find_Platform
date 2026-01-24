@@ -23,9 +23,17 @@ public class User {
     @Column(name = "avatar_url", length = Integer.MAX_VALUE)
     private String avatarUrl;
 
-    @ColumnDefault("'USER'")
+//    @ColumnDefault("'USER'")
     @Column(name = "role", nullable = false)
     private String role;
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
 
     @ColumnDefault("now()")
     @Column(name = "created_at", nullable = false)
