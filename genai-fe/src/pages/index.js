@@ -1,9 +1,10 @@
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router"; // <--- 1. Import Router
 import { Geist } from "next/font/google";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import Link from 'next/link'; // <--- ΠΡΟΣΘΗΚΗ
+import Link from 'next/link';
 import styles from "@/styles/Home.module.css";
 
 const geistSans = Geist({
@@ -11,28 +12,28 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-// --- ΡΥΘΜΙΣΗ ΤΟΥ AGENT ΓΙΑ JOB SEARCH ---
 const initialAgents = [
   {
     id: "career-agent",
     name: "AI Career Coach",
     settings: {
-      llmModel: "llama3.1:latest", // ή "gpt-4o-mini" αν έχεις OpenAI
-      embeddingsModel: "nomic-embed-text:latest", // ή "text-embedding-3-small"
-      rerankingModel: "voyage-large-2-instruct", // Το Voyage που έχεις στο backend
+      llmModel: "llama3.1:latest",
+      embeddingsModel: "nomic-embed-text:latest",
+      rerankingModel: "voyage-large-2-instruct",
       maxTokens: "1024",
       temperature: "0.3",
-      behavior: "You are a helpful AI Career Recruiter. Help the user find job openings from the available documents. You can use the 'search' tool to find jobs and the 'apply_to_job' tool to submit applications.",
+      behavior: "You are a helpful AI Career Recruiter...",
     },
   },
 ];
 
-// --- TODO: ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΜΕ ΤΑ ID ΑΠΟ ΤΗ ΒΑΣΗ ΣΟΥ (Πίνακες: app_user, account) ---
+// Κρατάμε μόνο το ACCOUNT_ID hardcoded (ή το παίρνεις από localStorage αν το αποθηκεύεις στο login)
 const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
-const USER_ID = "edbe9124-8811-43a6-ae66-1c773d9e8c73"; // Το ID του Chris
-const THREAD_ID = null; // null για νέο thread κάθε φορά, ή βάλε ένα UUID
+const THREAD_ID = null;
 
 export default function Home() {
+  const router = useRouter(); // <--- 2. Init Router
+
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [activeItem, setActiveItem] = useState(null);
@@ -42,22 +43,9 @@ export default function Home() {
   const [semanticSearchInput, setSemanticSearchInput] = useState("");
   const [semanticSearchLoading, setSemanticSearchLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [documentModalOpen, setDocumentModalOpen] = useState(false);
-  const [agents, setAgents] = useState(initialAgents);
-  const [activeAgentId, setActiveAgentId] = useState(initialAgents[0].id);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsAgentId, setSettingsAgentId] = useState(initialAgents[0].id);
 
-  // Settings Form State
-  const [settingsForm, setSettingsForm] = useState({
-    name: initialAgents[0].name,
-    llmModel: initialAgents[0].settings.llmModel,
-    embeddingsModel: initialAgents[0].settings.embeddingsModel,
-    rerankingModel: initialAgents[0].settings.rerankingModel,
-    maxTokens: initialAgents[0].settings.maxTokens,
-    temperature: initialAgents[0].settings.temperature,
-    behavior: initialAgents[0].settings.behavior,
-  });
+  // State για τον τρέχοντα χρήστη (για το UI)
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState([
@@ -71,10 +59,22 @@ export default function Home() {
   ]);
 
   const historyRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
 
-  // Scroll to bottom
+  // --- 3. AUTH CHECK & INITIALIZATION ---
+  useEffect(() => {
+    // Έλεγχος αν υπάρχει token
+    const token = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+
+    if (!token) {
+      // Αν δεν υπάρχει, πίσω στο Login
+      router.push('/login');
+    } else {
+      // Αν υπάρχει, κρατάμε το User ID για να ξεχωρίζουμε τα μηνύματά μας στο chat
+      setCurrentUserId(storedUserId);
+    }
+  }, [router]);
+
   useEffect(() => {
     const node = historyRef.current;
     if (node) {
@@ -82,16 +82,15 @@ export default function Home() {
     }
   }, [history]);
 
-  // Fetch Documents (Job Postings)
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         setDocumentsLoading(true);
-        const response = await fetch("http://localhost:8080/documents"); // Ή /api/documents αν έχεις proxy
+        const response = await fetch("http://localhost:8080/documents");
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         setDocuments(data);
-        setFilteredItems(data); // Αρχικά δείχνουμε τα πάντα
+        setFilteredItems(data);
         if (data.length > 0) setActiveItem(data[0]);
       } catch (error) {
         console.error("Error fetching documents:", error);
@@ -102,19 +101,21 @@ export default function Home() {
     fetchDocuments();
   }, []);
 
-  // --- SEND MESSAGE ---
+  // --- 4. SEND MESSAGE (ΜΕ TOKEN) ---
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!message.trim()) return;
 
     const userMessage = message.trim();
+    const token = localStorage.getItem('token'); // Πάρε το token
 
+    // Προσθήκη στο UI (Optimistic update)
     setHistory((current) => [
       ...current,
       {
         id: `${Date.now()}-user`,
         author: "You",
-        userId: USER_ID,
+        userId: currentUserId, // Χρήση του ID από το login
         text: userMessage,
         createdAt: new Date().toISOString(),
       },
@@ -122,19 +123,29 @@ export default function Home() {
     setMessage("");
 
     try {
-      // Κλήση στο Backend
       const response = await fetch("http://localhost:8080/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` // <--- ΤΟ ΚΛΕΙΔΙ: Στέλνουμε το Token
+        },
         body: JSON.stringify({
           content: userMessage,
           thread: THREAD_ID ? { id: THREAD_ID } : null,
           account: { id: ACCOUNT_ID },
-          user: { id: USER_ID },
+          // ΔΕΝ στέλνουμε user: { id: ... }, το βρίσκει το Backend από το token!
         }),
       });
 
+      if (response.status === 401 || response.status === 403) {
+          // Αν το token έληξε, redirect στο login
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+      }
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
       const data = await response.json();
 
       if (data.message) {
@@ -157,16 +168,14 @@ export default function Home() {
           id: `${Date.now()}-error`,
           author: "System",
           userId: "agent",
-          text: "Error: Failed to connect to the AI Recruiter.",
+          text: "Error: Failed to connect (or session expired). Try logging in again.",
           createdAt: new Date().toISOString(),
         },
       ]);
     }
   };
 
-  const activeAgent = agents.find((agent) => agent.id === activeAgentId) ?? agents[0];
-
-  // --- CLIENT SIDE SEARCH (Simple) ---
+  // ... (Υπόλοιπος κώδικας Search παραμένει ίδιος) ...
   useEffect(() => {
     if (!searchInput.trim()) {
       if (!semanticSearchInput.trim()) setFilteredItems(documents);
@@ -181,15 +190,12 @@ export default function Home() {
     setFilteredItems(matches);
   }, [searchInput, documents]);
 
-  // --- SEMANTIC SEARCH (Server Side) ---
   useEffect(() => {
     const timer = setTimeout(async () => {
         if (!semanticSearchInput.trim()) return;
-
         setSemanticSearchLoading(true);
         try {
             const searchText = encodeURIComponent(semanticSearchInput.trim());
-            // Κλήση στο Search Endpoint
             const res = await fetch(`http://localhost:8080/documents?searchText=${searchText}&accountId=${ACCOUNT_ID}`);
             if(res.ok) {
                 const data = await res.json();
@@ -201,10 +207,6 @@ export default function Home() {
     return () => clearTimeout(timer);
    }, [semanticSearchInput]);
 
-
-     // ... (Κώδικας για Settings/Modal παραμένει ίδιος ή παρόμοιος, τον παραλείπω για συντομία, κράτα τον δικό σου) ...
-     // Εδώ συμπεριλαμβάνω μόνο το render return με τις αλλαγές
-
      return (
        <>
          <Head>
@@ -213,13 +215,18 @@ export default function Home() {
          </Head>
          <div className={`${styles.page} ${geistSans.variable}`}>
 
-           {/* SIDEBAR */}
            <div className={styles.sidebar}>
-               {/* LINK ΓΙΑ ADMIN PANEL */}
-               <div style={{ marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #333' }}>
-                   <Link href="/admin" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold' }}>
-                       &larr; Go to Admin / Post Jobs
+               <div style={{ marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <Link href="/admin" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em' }}>
+                       Admin Panel
                    </Link>
+                   {/* Logout Button */}
+                   <button
+                    onClick={() => { localStorage.clear(); router.push('/login'); }}
+                    style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.9em' }}
+                   >
+                    Logout
+                   </button>
                </div>
 
              <label className={styles.searchLabel}>Semantic Job Search</label>
@@ -233,7 +240,6 @@ export default function Home() {
 
              <h1 className={styles.sidebarTitle}>Open Positions</h1>
 
-             {/* Document List */}
              <div className={styles.sidebarListWrapper}>
                {documentsLoading ? (
                  <div className={styles.sidebarLoading}>Loading jobs...</div>
@@ -243,7 +249,7 @@ export default function Home() {
                      <li key={item.id}>
                        <button
                          className={`${styles.sidebarItem} ${activeItem?.id === item.id ? styles.sidebarItemActive : ""}`}
-                         onClick={() => setSelectedDocument(item)} // Άνοιγμα Modal
+                         onClick={() => setSelectedDocument(item)}
                        >
                          <span className={styles.sidebarItemTitle}>{item.title}</span>
                          <span className={styles.sidebarItemDescription} style={{fontSize: '0.8em', color: '#666'}}>
@@ -257,7 +263,6 @@ export default function Home() {
              </div>
            </div>
 
-           {/* CHAT PANEL */}
            <main className={styles.chatPanel}>
              <header className={styles.chatHeader}>
                 <h2 className={styles.chatTitle}>AI Recruiter Chat</h2>
@@ -267,12 +272,12 @@ export default function Home() {
                {history.map((entry) => (
                  <article
                    key={entry.id}
-                   className={`${styles.chatMessage} ${entry.userId === USER_ID ? styles.chatMessageMine : styles.chatMessageOther}`}
+                   // Ελέγχουμε το ID του μηνύματος με το ID του συνδεδεμένου χρήστη
+                   className={`${styles.chatMessage} ${entry.userId === currentUserId ? styles.chatMessageMine : styles.chatMessageOther}`}
                  >
                    <div className={styles.chatMessageHeader}>
                      <span className={styles.chatAuthor}>{entry.author}</span>
                    </div>
-                   {/* Markdown Support για ωραίες απαντήσεις */}
                    <div style={{ lineHeight: '1.6' }}>
                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.text}</ReactMarkdown>
                    </div>
@@ -282,7 +287,7 @@ export default function Home() {
 
              <form className={styles.chatInputArea} onSubmit={handleSubmit}>
                <textarea
-                 placeholder="Ask about jobs (e.g., 'Find me a Java Developer role')..."
+                 placeholder="Ask about jobs..."
                  className={styles.chatInput}
                  value={message}
                  onChange={(e) => setMessage(e.target.value)}
@@ -293,7 +298,6 @@ export default function Home() {
            </main>
          </div>
 
-         {/* DOCUMENT MODAL (Job Description) */}
          {selectedDocument && (
            <div className={styles.modalOverlay} onClick={() => setSelectedDocument(null)}>
              <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -303,7 +307,6 @@ export default function Home() {
                </div>
                <div className={styles.modalContent} style={{ padding: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
                  <ReactMarkdown>{selectedDocument.body}</ReactMarkdown>
-                 {/* Κουμπί Apply (Manual) */}
                  <div style={{marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '10px'}}>
                      <button
                        style={{backgroundColor: '#0070f3', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer'}}
