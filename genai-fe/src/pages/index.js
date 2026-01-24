@@ -28,8 +28,8 @@ const initialAgents = [
 ];
 
 // --- TODO: ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΜΕ ΤΑ ID ΑΠΟ ΤΗ ΒΑΣΗ ΣΟΥ (Πίνακες: app_user, account) ---
-const ACCOUNT_ID = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
-const USER_ID = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"; // Το ID του Chris
+const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
+const USER_ID = "edbe9124-8811-43a6-ae66-1c773d9e8c73"; // Το ID του Chris
 const THREAD_ID = null; // null για νέο thread κάθε φορά, ή βάλε ένα UUID
 
 export default function Home() {
@@ -318,3 +318,4 @@ export default function Home() {
          )}
        </>
      );
+}
