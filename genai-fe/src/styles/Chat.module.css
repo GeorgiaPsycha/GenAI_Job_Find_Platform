@@ -1,0 +1,74 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: sans-serif;
+}
+
+.chatBox {
+  height: 60vh;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  overflow-y: scroll;
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.message {
+  padding: 10px 15px;
+  border-radius: 10px;
+  max-width: 80%;
+  line-height: 1.5;
+}
+
+.user {
+  align-self: flex-end;
+  background-color: #0070f3;
+  color: white;
+}
+
+.agent {
+  align-self: flex-start;
+  background-color: #e5e5ea;
+  color: black;
+}
+
+.toolOutput {
+  background-color: #fffae6;
+  border: 1px solid #ffe58f;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+}
+
+.inputArea {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.input {
+  flex: 1;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.button {
+  padding: 15px 30px;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.adminLink {
+  display: block;
+  margin-bottom: 20px;
+  color: #0070f3;
+  text-decoration: none;
+}
