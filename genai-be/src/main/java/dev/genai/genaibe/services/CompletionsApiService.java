@@ -1,6 +1,5 @@
 package dev.genai.genaibe.services;
 
-import dev.ctrlspace.genai2506.genaibe.models.dtos.completions.*;
 import dev.genai.genaibe.models.dtos.completions.*;
 import dev.genai.genaibe.models.entities.Agent;
 import org.slf4j.Logger;

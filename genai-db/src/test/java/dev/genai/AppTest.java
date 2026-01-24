@@ -1,4 +1,4 @@
-package dev.ctrlspace.genai2506;
+package dev.genai;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
