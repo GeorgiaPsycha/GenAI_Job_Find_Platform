@@ -203,8 +203,8 @@ public class DocumentService {
         agent.setBehavior("""
             You are a DB Admin, this is a Postgres DB, users will ask you stuff, and you will run as many queries as needed in the DB to achive the goal. You dont know the schema, run queries to find it.
             """);
-        agent.setLlmModel("gpt-5-mini");
-        agent.setEmbeddingsModel("text-embedding-3-small");
+        agent.setLlmModel("llama3.2");
+        agent.setEmbeddingsModel("nomic-embed-text");
         agent.setRerankingModel("rerank-2.5-lite");
         agent.setTemperature(1.0);
         agent.setMaxTokens(1000);

@@ -48,12 +48,12 @@ public class CompletionsApiService {
         RequestDTO requestBody = RequestDTO.builder()
                 .model(model)
                 .messages(new ArrayList<>())
-//                .reasoningEffort("low")
                 .temperature(temperature)
                 .maxCompletionTokens(maxTokens)
                 .toolChoice("auto")
                 .tools(tools)
                 .build();
+
         requestBody.getMessages().add(MessageDTO.builder()
                 .role("system")
                 .content(systemPrompt)
@@ -62,20 +62,19 @@ public class CompletionsApiService {
         for (MessageDTO message : messages) {
             requestBody.getMessages().addLast(message);
         }
+        logger.info(">>> Sending Request to LLM [Model: {}]", model);
 
 
-        logger.debug("Request body: {}", requestBody);
-        HttpEntity request = new HttpEntity<>(requestBody, headers);
-        ResponseEntity response = restTemplate.postForEntity(
-                url,
-                request,
-                ChatCompletionResponse.class);
+        HttpEntity<RequestDTO> request = new HttpEntity<>(requestBody, headers);
 
-        logger.debug("Response body: {}", response);
-
-        ChatCompletionResponse responseBody = (ChatCompletionResponse) response.getBody();
-
-        return responseBody;
+        try {
+            ResponseEntity<ChatCompletionResponse> response = restTemplate.postForEntity(url, request, ChatCompletionResponse.class);
+            logger.info("<<< Received Response from LLM");
+            return (ChatCompletionResponse) response.getBody();
+        } catch (Exception e) {
+            logger.error("Error calling LLM: {}", e.getMessage());
+            throw new RuntimeException("Failed to call LLM provider", e);
+        }
     }
 
     public EmbeddingResponse getEmbedding(String url, String model, MessageDTO messages) {
@@ -93,14 +92,12 @@ public class CompletionsApiService {
                 .input(messages.getContent())
                 .build();
 
-        HttpEntity request = new HttpEntity<>(requestBody, headers);
-        ResponseEntity response = restTemplate.postForEntity(
+        HttpEntity<EmbeddingRequest> request = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<EmbeddingResponse> response = restTemplate.postForEntity(
                 url,
                 request,
                 EmbeddingResponse.class);
 
-        EmbeddingResponse responseBody = (EmbeddingResponse) response.getBody();
-
-        return responseBody;
+        return (EmbeddingResponse) response.getBody();
     }
 }
