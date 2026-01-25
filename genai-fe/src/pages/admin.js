@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
-import styles from "@/styles/Home.module.css"; // Χρησιμοποιούμε τα ίδια styles
+import styles from "@/styles/Home.module.css";
 
-// TODO: ΒΑΛΕ ΤΑ ID ΣΟΥ ΕΔΩ
-const ACCOUNT_ID = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
-const ADMIN_ID = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
+const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
 
 export default function Admin() {
+    const router = useRouter();
+
+    // Απλά states για τη φόρμα
     const [form, setForm] = useState({
         title: '',
         company: '',
@@ -16,18 +18,43 @@ export default function Admin() {
     });
     const [status, setStatus] = useState('');
 
+    // State για να ξέρουμε πότε φορτώθηκε η σελίδα στον browser
+    const [isMounted, setIsMounted] = useState(false);
+
+    // 1. Τρέχει ΜΙΑ ΦΟΡΑ όταν ανοίξει η σελίδα
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsMounted(true);
+
+        const role = localStorage.getItem('role');
+        const token = localStorage.getItem('token');
+
+        // Αν δεν είναι ADMIN, τον στέλνουμε στο login χωρίς πολλά πολλά
+        if (!token || role !== 'ADMIN') {
+            router.push('/login');
+        }
+    }, []); // Οι αγκύλες [] σημαίνουν "τρέξε μόνο μία φορά", άρα κανένα loop!
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('Publishing...');
 
+        // 2. Διαβάζουμε τα στοιχεία ΤΗ ΣΤΙΓΜΗ ΠΟΥ ΠΑΤΑΣ ΤΟ ΚΟΥΜΠΙ
+        // Έτσι δεν χρειάζεται να τα έχουμε σε state και να μπερδεύεται το React
+        const token = localStorage.getItem('token');
+        const adminId = localStorage.getItem('userId');
+
         try {
             const res = await fetch('http://localhost:8080/documents', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     ...form,
                     account: { id: ACCOUNT_ID },
-                    createdBy: { id: ADMIN_ID },
+                    createdBy: { id: adminId }, // Στέλνουμε το ID δυναμικά
                     status: 'active'
                 })
             });
@@ -44,67 +71,105 @@ export default function Admin() {
         }
     };
 
+    // Αν δεν έχει φορτώσει η σελίδα στον browser, μην δείξεις τίποτα (για αποφυγή errors)
+    if (!isMounted) return null;
+
     return (
-        <div className={styles.page} style={{ padding: '40px', display: 'block', maxWidth: '800px', margin: '0 auto' }}>
-            <Link href="/" style={{ color: '#0070f3', textDecoration: 'none', marginBottom: '20px', display: 'block' }}>
-                &larr; Back to Candidate Chat
-            </Link>
+        <div className={styles.page} style={{ display: 'flex', justifyContent: 'center', minHeight: '100vh' }}>
+            <div style={{ padding: '40px', width: '100%', maxWidth: '800px' }}>
 
-            <h1 style={{ marginBottom: '20px' }}>Admin Dashboard: Post a Job</h1>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <Link href="/" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold' }}>
+                        &larr; Chat Preview (User View)
+                    </Link>
+                    <button
+                        onClick={() => { localStorage.clear(); router.push('/login'); }}
+                        style={{ background: 'none', border: '1px solid #ff4444', color: '#ff4444', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
+                    >
+                        Logout
+                    </button>
+                </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <input
-                    className={styles.chatInput}
-                    placeholder="Job Title (e.g. Senior Java Dev)"
-                    value={form.title}
-                    onChange={e => setForm({...form, title: e.target.value})}
-                    required
-                />
-                <input
-                    className={styles.chatInput}
-                    placeholder="Company Name"
-                    value={form.company}
-                    onChange={e => setForm({...form, company: e.target.value})}
-                    required
-                />
-                <input
-                    className={styles.chatInput}
-                    placeholder="Location"
-                    value={form.location}
-                    onChange={e => setForm({...form, location: e.target.value})}
-                />
-                <input
-                    className={styles.chatInput}
-                    placeholder="Seniority (Junior, Mid, Senior)"
-                    value={form.seniority}
-                    onChange={e => setForm({...form, seniority: e.target.value})}
-                />
-                <textarea
-                    className={styles.chatInput}
-                    placeholder="Job Description (Paste full text here...)"
-                    rows={10}
-                    value={form.body}
-                    onChange={e => setForm({...form, body: e.target.value})}
-                    required
-                />
+                <h1 style={{ marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
+                    🛡️ Recruiter Dashboard
+                </h1>
 
-                <button
-                    type="submit"
-                    style={{
+                {/* Form */}
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input
+                            className={styles.chatInput}
+                            style={{ flex: 1 }}
+                            placeholder="Job Title (e.g. Senior Java Dev)"
+                            value={form.title}
+                            onChange={e => setForm({...form, title: e.target.value})}
+                            required
+                        />
+                        <input
+                            className={styles.chatInput}
+                            style={{ flex: 1 }}
+                            placeholder="Company Name"
+                            value={form.company}
+                            onChange={e => setForm({...form, company: e.target.value})}
+                            required
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input
+                            className={styles.chatInput}
+                            style={{ flex: 1 }}
+                            placeholder="Location (e.g. Remote, Athens)"
+                            value={form.location}
+                            onChange={e => setForm({...form, location: e.target.value})}
+                        />
+                        <input
+                            className={styles.chatInput}
+                            style={{ flex: 1 }}
+                            placeholder="Seniority (Junior, Mid, Senior)"
+                            value={form.seniority}
+                            onChange={e => setForm({...form, seniority: e.target.value})}
+                        />
+                    </div>
+
+                    <textarea
+                        className={styles.chatInput}
+                        placeholder="Job Description (Paste full text here...)"
+                        rows={12}
+                        value={form.body}
+                        onChange={e => setForm({...form, body: e.target.value})}
+                        required
+                        style={{ resize: 'vertical' }}
+                    />
+
+                    <button
+                        type="submit"
+                        className={styles.uploadButton}
+                        style={{
+                            padding: '15px',
+                            fontWeight: 'bold',
+                            fontSize: '1.1em',
+                            marginTop: '10px'
+                        }}
+                    >
+                        Post Job Position
+                    </button>
+                </form>
+
+                {status && (
+                    <div style={{
+                        marginTop: '20px',
                         padding: '15px',
-                        backgroundColor: '#0070f3',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        border: 'none',
                         borderRadius: '8px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Post Job
-                </button>
-            </form>
-
-            {status && <div style={{ marginTop: '20px', fontSize: '1.2em' }}>{status}</div>}
+                        backgroundColor: status.includes('✅') ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                        border: status.includes('✅') ? '1px solid green' : '1px solid red',
+                        textAlign: 'center'
+                    }}>
+                        {status}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

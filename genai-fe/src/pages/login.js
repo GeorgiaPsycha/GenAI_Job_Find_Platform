@@ -21,6 +21,7 @@ export default function Login() {
 
       if (res.ok) {
         const data = await res.json();
+        console.log("LOGIN RESPONSE:", data);
         // Αποθήκευση στο Browser
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
@@ -28,7 +29,7 @@ export default function Login() {
         localStorage.setItem('role', data.role);
 
         // Redirect ανάλογα με τον ρόλο (προαιρετικό, τώρα πάνε όλα στο chat)
-        if (data.role === 'admin') {
+        if (data.role === 'ADMIN') {
           await router.push('/admin'); // Οι Recruiters πάνε στο Admin Panel
         } else {
           await router.push('/'); // Οι Candidates πάνε στο Chat
