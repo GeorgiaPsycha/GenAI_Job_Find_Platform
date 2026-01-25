@@ -88,7 +88,8 @@ public class AgentService {
                         "type": "object",
                         "properties": {
                             "job_id": { "type": "string", "description": "The UUID of the job/document." },
-                            "motivation": { "type": "string", "description": "A short motivation sentence." }
+                            "motivation": { "type": "string", "description": "A short motivation sentence." },
+                            "cv_file_url": { "type": "string", "description": "The URL of the uploaded CV file (if provided by user)." }
                         },
                         "required": ["job_id", "motivation"]
                     }

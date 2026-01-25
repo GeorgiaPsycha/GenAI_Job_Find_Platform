@@ -74,39 +74,34 @@ public class ApplyTool implements Tool {
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
         String jobIdStr = arguments.get("job_id").asText();
         String motivation = arguments.has("motivation") ? arguments.get("motivation").asText() : "No motivation provided";
+        String cvFileUrl = arguments.has("cv_file_url") ? arguments.get("cv_file_url").asText() : null;
 
         logger.info("--- Executing ApplyTool ---");
         logger.info("Target Job ID: {}", jobIdStr);
-        logger.info("Motivation: {}", motivation);
+        logger.info("CV URL: {}", cvFileUrl);
 
         Document job = documentRepository.findById(UUID.fromString(jobIdStr))
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobIdStr));
 
-        User applicant;
-        if (message.getUser() != null) {
-            applicant = message.getUser();
-            logger.info("Applicant identified from Message: {}", applicant.getEmail());
-        } else {
-            applicant = userRepository.findByEmail("zeta@gmail.com")
-                    .orElseThrow(() -> new RuntimeException("Default user not found"));
-            logger.warn("No user in message. Using fallback user: {}", applicant.getEmail());
+        User applicant = message.getUser();
+        if (applicant == null) {
+            return MessageDTO.builder().role("tool").content("Error: No user identified.").build();
         }
 
         Application app = new Application();
         app.setJob(job);
         app.setUser(applicant);
         app.setMotivationText(motivation);
+        app.setCvFileUrl(cvFileUrl);
         app.setStatus("applied");
         app.setCreatedAt(Instant.now());
         app.setUpdatedAt(Instant.now());
 
         applicationRepository.save(app);
 
-        logger.info("✅ Application SAVED successfully! [App ID: {}]", app.getId());
-
         return MessageDTO.builder()
                 .role("tool")
-                .content(String.format("Successfully applied to '%s' at '%s'. Application ID saved.", job.getTitle(), job.getCompany()))
+                .content(String.format("Successfully applied to '%s'. Application ID: %s", job.getTitle(), app.getId()))
                 .build();
     }
 }

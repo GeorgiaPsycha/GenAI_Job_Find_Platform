@@ -15,4 +15,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("")
                 .allowCredentials(true);
     }
+
+    @Override
+    public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+        // Όταν ζητάει κάποιος http://localhost:8080/uploads/..., διάβασε από τον τοπικό φάκελο uploads/
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:uploads/");
+    }
 }

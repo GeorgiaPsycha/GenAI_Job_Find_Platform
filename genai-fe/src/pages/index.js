@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/router"; // <--- 1. Import Router
+import { useRouter } from "next/router";
 import { Geist } from "next/font/google";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,27 +12,11 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const initialAgents = [
-  {
-    id: "career-agent",
-    name: "AI Career Coach",
-    settings: {
-      llmModel: "llama3.1:latest",
-      embeddingsModel: "nomic-embed-text:latest",
-      rerankingModel: "voyage-large-2-instruct",
-      maxTokens: "1024",
-      temperature: "0.3",
-      behavior: "You are a helpful AI Career Recruiter...",
-    },
-  },
-];
-
-// Κρατάμε μόνο το ACCOUNT_ID hardcoded (ή το παίρνεις από localStorage αν το αποθηκεύεις στο login)
 const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
 const THREAD_ID = null;
 
 export default function Home() {
-  const router = useRouter(); // <--- 2. Init Router
+  const router = useRouter();
 
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
@@ -44,10 +28,11 @@ export default function Home() {
   const [semanticSearchLoading, setSemanticSearchLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
 
-  // State για τον τρέχοντα χρήστη (για το UI)
+  // Auth States
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
 
+  // Chat States
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState([
     {
@@ -59,25 +44,26 @@ export default function Home() {
     },
   ]);
 
+  // Upload States (ΝΕΟ)
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const historyRef = useRef(null);
 
-  // --- 3. AUTH CHECK & INITIALIZATION ---
+  // --- 1. AUTH CHECK ---
   useEffect(() => {
-    // Έλεγχος αν υπάρχει token
     const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
     const storedRole = localStorage.getItem('role');
 
     if (!token) {
-      // Αν δεν υπάρχει, πίσω στο Login
       router.push('/login');
     } else {
-      // Αν υπάρχει, κρατάμε το User ID για να ξεχωρίζουμε τα μηνύματά μας στο chat
       setCurrentUserId(storedUserId);
       setUserRole(storedRole);
     }
   }, [router]);
 
+  // Scroll to bottom
   useEffect(() => {
     const node = historyRef.current;
     if (node) {
@@ -85,6 +71,7 @@ export default function Home() {
     }
   }, [history]);
 
+  // Fetch Documents
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
@@ -104,21 +91,81 @@ export default function Home() {
     fetchDocuments();
   }, []);
 
-  // --- 4. SEND MESSAGE (ΜΕ TOKEN) ---
+  // --- 2. FILE UPLOAD LOGIC (ΝΕΟ) ---
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem('token');
+
+    try {
+        // Α. Ανέβασμα Αρχείου
+        const uploadRes = await fetch("http://localhost:8080/files/upload", {
+            method: "POST",
+            body: formData,
+            // Σημείωση: Στο upload ΔΕΝ βάζουμε 'Content-Type': 'application/json'
+            // γιατί είναι multipart/form-data (το browser το βάζει αυτόματα)
+        });
+
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const data = await uploadRes.json();
+        const fileUrl = data.url;
+
+        // Β. Ενημέρωση UI ότι ανέβηκε
+        setHistory((prev) => [
+            ...prev,
+            {
+                id: Date.now() + "-upload",
+                author: "System",
+                userId: "system",
+                text: `✅ CV Uploaded successfully! I will use it for your applications.`,
+                createdAt: new Date().toISOString(),
+            }
+        ]);
+
+        // Γ. Ενημέρωση του Agent (Κρυφό μήνυμα για Context)
+        const systemMsg = `I have uploaded my CV. The file is located at: ${fileUrl}. Please use this for my applications.`;
+
+        await fetch("http://localhost:8080/messages", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                content: systemMsg,
+                thread: THREAD_ID ? { id: THREAD_ID } : null,
+                account: { id: ACCOUNT_ID },
+            }),
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Error uploading file.");
+    } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
+    }
+  };
+
+
+  // --- 3. SEND MESSAGE ---
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!message.trim()) return;
 
     const userMessage = message.trim();
-    const token = localStorage.getItem('token'); // Πάρε το token
+    const token = localStorage.getItem('token');
 
-    // Προσθήκη στο UI (Optimistic update)
     setHistory((current) => [
       ...current,
       {
         id: `${Date.now()}-user`,
         author: "You",
-        userId: currentUserId, // Χρήση του ID από το login
+        userId: currentUserId,
         text: userMessage,
         createdAt: new Date().toISOString(),
       },
@@ -130,18 +177,16 @@ export default function Home() {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}` // <--- ΤΟ ΚΛΕΙΔΙ: Στέλνουμε το Token
+            "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           content: userMessage,
           thread: THREAD_ID ? { id: THREAD_ID } : null,
           account: { id: ACCOUNT_ID },
-          // ΔΕΝ στέλνουμε user: { id: ... }, το βρίσκει το Backend από το token!
         }),
       });
 
       if (response.status === 401 || response.status === 403) {
-          // Αν το token έληξε, redirect στο login
           localStorage.removeItem('token');
           router.push('/login');
           return;
@@ -171,13 +216,14 @@ export default function Home() {
           id: `${Date.now()}-error`,
           author: "System",
           userId: "agent",
-          text: "Error: Failed to connect (or session expired). Try logging in again.",
+          text: "Error: Failed to connect. Try logging in again.",
           createdAt: new Date().toISOString(),
         },
       ]);
     }
   };
 
+  // Search Logic
   useEffect(() => {
     if (!searchInput.trim()) {
       if (!semanticSearchInput.trim()) setFilteredItems(documents);
@@ -219,14 +265,14 @@ export default function Home() {
 
            <div className={styles.sidebar}>
                <div style={{ marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 {userRole === 'admin' ? (
+                 {/* Έλεγχος για ADMIN (κεφαλαία ή μικρά ανάλογα τη βάση σου, εδώ έβαλα ADMIN βάσει της τελευταίας συζήτησης) */}
+                 {(userRole === 'ADMIN' || userRole === 'admin') ? (
                      <Link href="/admin" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9em' }}>
                        Admin Panel
                      </Link>
                  ) : (
                      <span style={{ color: '#666', fontSize: '0.9em', fontWeight: 'bold' }}>Job Candidate</span>
                  )}
-                   {/* Logout Button */}
                    <button
                     onClick={() => { localStorage.clear(); router.push('/login'); }}
                     style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.9em' }}
@@ -278,7 +324,6 @@ export default function Home() {
                {history.map((entry) => (
                  <article
                    key={entry.id}
-                   // Ελέγχουμε το ID του μηνύματος με το ID του συνδεδεμένου χρήστη
                    className={`${styles.chatMessage} ${entry.userId === currentUserId ? styles.chatMessageMine : styles.chatMessageOther}`}
                  >
                    <div className={styles.chatMessageHeader}>
@@ -292,8 +337,34 @@ export default function Home() {
              </section>
 
              <form className={styles.chatInputArea} onSubmit={handleSubmit}>
+               {/* --- CV UPLOAD SECTION --- */}
+               <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{display: 'none'}}
+                  onChange={handleFileUpload}
+                  accept=".pdf,.doc,.docx"
+               />
+               <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  style={{
+                      marginRight: '10px',
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                      opacity: uploading ? 0.5 : 1
+                  }}
+                  title="Upload CV"
+               >
+                  {uploading ? "⏳" : "📎"}
+               </button>
+               {/* ------------------------- */}
+
                <textarea
-                 placeholder="Ask about jobs..."
+                 placeholder="Ask about jobs or upload your CV..."
                  className={styles.chatInput}
                  value={message}
                  onChange={(e) => setMessage(e.target.value)}
