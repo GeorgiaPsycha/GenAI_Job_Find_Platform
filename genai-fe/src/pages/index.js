@@ -92,6 +92,7 @@ export default function Home() {
     }, []);
 
     // --- 2. FILE UPLOAD LOGIC ---
+    // --- 2. UPLOAD LOGIC ---
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -99,17 +100,26 @@ export default function Home() {
         setUploading(true);
         const formData = new FormData();
         formData.append("file", file);
-        const token = localStorage.getItem('token');
+
+        const token = localStorage.getItem('token'); // Παίρνουμε το token
 
         try {
             const uploadRes = await fetch("http://localhost:8080/files/upload", {
                 method: "POST",
+                headers: {
+                    // ΠΡΟΣΟΧΗ: Δεν βάζουμε 'Content-Type': 'multipart/form-data'
+                    // (το βάζει ο browser αυτόματα με το boundary),
+                    // ΑΛΛΑ ΠΡΕΠΕΙ ΝΑ ΒΑΛΟΥΜΕ ΤΟ TOKEN:
+                    "Authorization": `Bearer ${token}`
+                },
                 body: formData,
             });
 
             if (!uploadRes.ok) throw new Error("Upload failed");
             const data = await uploadRes.json();
             const fileUrl = data.url;
+
+            // ... (το υπόλοιπο code μένει ίδιο) ...
 
             setHistory((prev) => [
                 ...prev,
@@ -124,7 +134,7 @@ export default function Home() {
 
             const systemMsg = `I have uploaded my CV. The file is located at: ${fileUrl}. Please use this for my applications.`;
 
-            await fetch("http://localhost:8080/messages", {
+            const chatRes = await fetch("http://localhost:8080/messages", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -132,10 +142,17 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     content: systemMsg,
-                    thread: THREAD_ID ? { id: THREAD_ID } : null,
+                    thread: activeThreadId ? { id: activeThreadId } : null,
                     account: { id: ACCOUNT_ID },
                 }),
             });
+
+            if (chatRes.ok) {
+                const chatData = await chatRes.json();
+                if (chatData.thread && chatData.thread.id) {
+                    setActiveThreadId(chatData.thread.id);
+                }
+            }
 
         } catch (error) {
             console.error(error);

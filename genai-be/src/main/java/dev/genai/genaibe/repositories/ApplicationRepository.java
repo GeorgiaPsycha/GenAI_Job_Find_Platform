@@ -1,6 +1,8 @@
 package dev.genai.genaibe.repositories;
 
 import dev.genai.genaibe.models.entities.Application;
+import dev.genai.genaibe.models.entities.Document;
+import dev.genai.genaibe.models.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +15,7 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     // Βρες όλες τις αιτήσεις για μια συγκεκριμένη αγγελία (για τον Admin)
     List<Application> findByJobId(UUID jobId);
+    boolean existsByJobAndUser(Document job, User user);
 
     // Έλεγχος αν ο χρήστης έχει κάνει ήδη αίτηση σε αυτή την αγγελία
     Optional<Application> findByUserIdAndJobId(UUID userId, UUID jobId);

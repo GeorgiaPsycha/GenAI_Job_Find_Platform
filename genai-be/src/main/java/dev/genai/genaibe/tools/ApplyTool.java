@@ -72,33 +72,60 @@ public class ApplyTool implements Tool {
     @Override
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage message) throws Exception {
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
+
+        // 1. Διάβασμα παραμέτρων (με ασφάλεια για null)
         String jobIdStr = arguments.path("job_id").asText(null);
         String motivation = arguments.path("motivation").asText("I am very interested in this position.");
         String cvFileUrl = arguments.path("cv_file_url").asText(null);
 
         if (jobIdStr == null || "null".equals(jobIdStr)) {
-            throw new RuntimeException("Job ID is missing from the request.");
+            return MessageDTO.builder().role("tool").content("Error: Job ID was not provided.").build();
         }
-        logger.info("--- Executing ApplyTool ---");
-        logger.info("Target Job ID: {}", jobIdStr);
-        logger.info("CV URL: {}", cvFileUrl);
 
+        // 2. Εύρεση Job
         Document job = documentRepository.findById(UUID.fromString(jobIdStr))
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobIdStr));
 
+        // 3. Εύρεση User
         User applicant = message.getUser();
         if (applicant == null) {
-            applicant = userRepository.findByEmail("zeta@gmail.com").orElse(null);        }
+            // Fallback για testing (αν χρειάζεται)
+            applicant = userRepository.findByEmail("chris@mailinator.com").orElse(null);
+        }
 
+        if (applicant == null) {
+            return MessageDTO.builder().role("tool").content("Error: Could not identify the user applying.").build();
+        }
+
+        // --- ΑΛΛΑΓΗ ΓΙΑ DUPLICATE ---
+        // 4. Έλεγχος αν έχει ήδη κάνει αίτηση
+        boolean alreadyApplied = applicationRepository.existsByJobAndUser(job, applicant);
+        if (alreadyApplied) {
+            // Επιστρέφουμε μήνυμα επιτυχίας/ενημέρωσης ΧΩΡΙΣ να κάνουμε save
+            return MessageDTO.builder()
+                    .role("tool")
+                    .content(String.format("You have already applied for the position '%s'. No new application was created.", job.getTitle()))
+                    .build();
+        }
+
+        // 5. Δημιουργία Application
         Application app = new Application();
         app.setJob(job);
         app.setUser(applicant);
         app.setMotivationText(motivation);
-        app.setCvFileUrl(cvFileUrl);
+        app.setCvFileUrl(cvFileUrl); // Αν υπάρχει URL αρχείου
         app.setStatus("APPLIED");
+
+        // --- ΑΛΛΑΓΗ ΓΙΑ CV TEXT ---
+        // Αντλούμε το κείμενο από το προφίλ του χρήστη (αν υπάρχει) και το βάζουμε στην αίτηση
+        if (applicant.getCv_text() != null && !applicant.getCv_text().isEmpty()) {
+            app.setCvContentText(applicant.getCv_text());
+        }
+
         app.setCreatedAt(Instant.now());
         app.setUpdatedAt(Instant.now());
 
+        // 6. Αποθήκευση
         applicationRepository.save(app);
 
         return MessageDTO.builder()
