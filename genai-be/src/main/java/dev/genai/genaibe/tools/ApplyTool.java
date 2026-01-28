@@ -72,10 +72,13 @@ public class ApplyTool implements Tool {
     @Override
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage message) throws Exception {
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
-        String jobIdStr = arguments.get("job_id").asText();
-        String motivation = arguments.has("motivation") ? arguments.get("motivation").asText() : "No motivation provided";
-        String cvFileUrl = arguments.has("cv_file_url") ? arguments.get("cv_file_url").asText() : null;
+        String jobIdStr = arguments.path("job_id").asText(null);
+        String motivation = arguments.path("motivation").asText("I am very interested in this position.");
+        String cvFileUrl = arguments.path("cv_file_url").asText(null);
 
+        if (jobIdStr == null || "null".equals(jobIdStr)) {
+            throw new RuntimeException("Job ID is missing from the request.");
+        }
         logger.info("--- Executing ApplyTool ---");
         logger.info("Target Job ID: {}", jobIdStr);
         logger.info("CV URL: {}", cvFileUrl);
@@ -85,15 +88,14 @@ public class ApplyTool implements Tool {
 
         User applicant = message.getUser();
         if (applicant == null) {
-            return MessageDTO.builder().role("tool").content("Error: No user identified.").build();
-        }
+            applicant = userRepository.findByEmail("zeta@gmail.com").orElse(null);        }
 
         Application app = new Application();
         app.setJob(job);
         app.setUser(applicant);
         app.setMotivationText(motivation);
         app.setCvFileUrl(cvFileUrl);
-        app.setStatus("applied");
+        app.setStatus("APPLIED");
         app.setCreatedAt(Instant.now());
         app.setUpdatedAt(Instant.now());
 

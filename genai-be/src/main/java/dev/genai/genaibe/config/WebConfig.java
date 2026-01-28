@@ -2,6 +2,7 @@ package dev.genai.genaibe.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -9,16 +10,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/*") // Επιτρέπουμε τα πάντα
-                .allowedOrigins("http://localhost:3000") // Από το Frontend μας
+        // ΑΛΛΑΓΗ 1: Το /** πιάνει όλα τα paths αναδρομικά
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:3000")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("")
+                // ΑΛΛΑΓΗ 2: Επιτρέπουμε όλα τα headers (π.χ. Authorization, Content-Type)
+                .allowedHeaders("*")
                 .allowCredentials(true);
     }
 
     @Override
-    public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
-        // Όταν ζητάει κάποιος http://localhost:8080/uploads/..., διάβασε από τον τοπικό φάκελο uploads/
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/");
     }

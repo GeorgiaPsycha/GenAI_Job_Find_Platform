@@ -48,7 +48,7 @@ public class Application {
     @Column(name = "motivation_text", length = Integer.MAX_VALUE)
     private String motivationText;
 
-    @ColumnDefault("'APPLIED'")
+    @ColumnDefault("APPLIED")
     @Column(name = "status", nullable = false)
     private String status; // APPLIED, REVIEWED, REJECTED, HIRED
 

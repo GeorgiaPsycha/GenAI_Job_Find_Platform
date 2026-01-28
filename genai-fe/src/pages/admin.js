@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
 import styles from "@/styles/Home.module.css";
 
 const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
@@ -33,14 +32,13 @@ export default function Admin() {
         if (!token || role !== 'ADMIN') {
             router.push('/login');
         }
-    }, []); // Οι αγκύλες [] σημαίνουν "τρέξε μόνο μία φορά", άρα κανένα loop!
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('Publishing...');
 
         // 2. Διαβάζουμε τα στοιχεία ΤΗ ΣΤΙΓΜΗ ΠΟΥ ΠΑΤΑΣ ΤΟ ΚΟΥΜΠΙ
-        // Έτσι δεν χρειάζεται να τα έχουμε σε state και να μπερδεύεται το React
         const token = localStorage.getItem('token');
         const adminId = localStorage.getItem('userId');
 
@@ -54,7 +52,7 @@ export default function Admin() {
                 body: JSON.stringify({
                     ...form,
                     account: { id: ACCOUNT_ID },
-                    createdBy: { id: adminId }, // Στέλνουμε το ID δυναμικά
+                    createdBy: { id: adminId },
                     status: 'active'
                 })
             });
@@ -71,18 +69,14 @@ export default function Admin() {
         }
     };
 
-    // Αν δεν έχει φορτώσει η σελίδα στον browser, μην δείξεις τίποτα (για αποφυγή errors)
     if (!isMounted) return null;
 
     return (
         <div className={styles.page} style={{ display: 'flex', justifyContent: 'center', minHeight: '100vh' }}>
             <div style={{ padding: '40px', width: '100%', maxWidth: '800px' }}>
 
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                    <Link href="/" style={{ color: '#0070f3', textDecoration: 'none', fontWeight: 'bold' }}>
-                        &larr; Chat Preview (User View)
-                    </Link>
+                {/* Header - Χωρίς το Back Link πλέον */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '30px' }}>
                     <button
                         onClick={() => { localStorage.clear(); router.push('/login'); }}
                         style={{ background: 'none', border: '1px solid #ff4444', color: '#ff4444', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}

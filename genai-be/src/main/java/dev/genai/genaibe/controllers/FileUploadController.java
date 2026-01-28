@@ -1,5 +1,11 @@
 package dev.genai.genaibe.controllers;
 
+import dev.genai.genaibe.models.entities.User;
+import dev.genai.genaibe.repositories.UserRepository;
+import dev.genai.genaibe.services.JwtService;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,33 +19,88 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/files")
+@Slf4j
 public class FileUploadController {
 
-    // Ορίζουμε φάκελο αποθήκευσης
     private static final String UPLOAD_DIR = "uploads/";
 
+    private final UserRepository userRepository;
+    private final JwtService jwtService;
+
+    // Constructor Injection
+    public FileUploadController(UserRepository userRepository, JwtService jwtService) {
+        this.userRepository = userRepository;
+        this.jwtService = jwtService;
+    }
+
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
         try {
-            // Δημιουργία φακέλου αν δεν υπάρχει
+            // 1. Basic File Save Logic (Keep existing)
             Path uploadPath = Paths.get(UPLOAD_DIR);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            // Μοναδικό όνομα αρχείου για να μην έχουμε συγκρούσεις
-            String filename = UUID.randomUUID().toString() + "" + file.getOriginalFilename();
+            String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Path filePath = uploadPath.resolve(filename);
 
-            // Αποθήκευση
             Files.copy(file.getInputStream(), filePath);
-
-            // Επιστροφή του URL (Relative path)
             String fileUrl = "/uploads/" + filename;
 
+            // 2. EXTRACT TEXT & SAVE TO DB (New Logic)
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String userId = jwtService.extractUserId(token);
+
+                    User user = userRepository.findById(UUID.fromString(userId))
+                            .orElseThrow(() -> new RuntimeException("User not found"));
+
+                    // Check if it is a Candidate (USER)
+                    // (Using equalsIgnoreCase to handle "user" or "USER")
+                    if ("user".equalsIgnoreCase(user.getRole())) {
+
+                        // Parse PDF to Text
+                        String extractedText = extractTextFromPdf(filePath);
+
+                        // Update User in DB
+                        user.setCv_text(extractedText);
+                        userRepository.save(user);
+
+                        log.info("✅ CV Text saved for user: {}", user.getEmail());
+                    } else {
+                        System.out.println("ℹ️ User is ADMIN/RECRUITER. CV text not saved.");
+                    }
+
+                } catch (Exception e) {
+                    System.err.println("⚠️ Warning: Failed to extract/save CV text: " + e.getMessage());
+                    // We don't fail the request, just log the warning
+                }
+            }
+
             return ResponseEntity.ok(Map.of("url", fileUrl));
+
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Failed to upload file");
         }
+    }
+
+    // Helper method to extract text using Apache PDFBox
+    private String extractTextFromPdf(Path path) {
+        try (PDDocument document = PDDocument.load(path.toFile())) {
+            if (!document.isEncrypted()) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                String text = stripper.getText(document);
+                // Limit text length to avoid database errors (optional, e.g., 5000 chars)
+                return text.length() > 10000 ? text.substring(0, 10000) : text;
+            }
+        } catch (IOException e) {
+            System.err.println("Error parsing PDF: " + e.getMessage());
+        }
+        return null;
     }
 }
