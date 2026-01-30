@@ -16,6 +16,7 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     // Βρες όλες τις αιτήσεις για μια συγκεκριμένη αγγελία (για τον Admin)
     List<Application> findByJobId(UUID jobId);
     boolean existsByJobAndUser(Document job, User user);
+    List<Application> findByUser(User user);
 
     // Έλεγχος αν ο χρήστης έχει κάνει ήδη αίτηση σε αυτή την αγγελία
     Optional<Application> findByUserIdAndJobId(UUID userId, UUID jobId);

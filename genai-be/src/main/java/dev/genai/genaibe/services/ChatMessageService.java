@@ -5,9 +5,10 @@ import dev.genai.genaibe.models.dtos.completions.MessageDTO;
 import dev.genai.genaibe.models.entities.ChatMessage;
 import dev.genai.genaibe.models.entities.ChatThread;
 import dev.genai.genaibe.repositories.ChatMessageRepository;
-import dev.genai.genaibe.repositories.ChatThreadRepository; // <--- Import το νέο Repo
+import dev.genai.genaibe.repositories.ChatThreadRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.Instant;
 

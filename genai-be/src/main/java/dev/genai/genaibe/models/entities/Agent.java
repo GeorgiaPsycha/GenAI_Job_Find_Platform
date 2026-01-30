@@ -1,6 +1,7 @@
 package dev.genai.genaibe.models.entities;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "agent")
+@Data
 public class Agent {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
