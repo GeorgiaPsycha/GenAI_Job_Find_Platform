@@ -17,14 +17,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
-@AllArgsConstructor
-@Data
 public class GetMyApplicationsTool implements Tool {
 
     private final ApplicationRepository applicationRepository;
     private final UserRepository userRepository;
+
+    public GetMyApplicationsTool(ApplicationRepository applicationRepository, UserRepository userRepository) {
+        this.applicationRepository = applicationRepository;
+        this.userRepository = userRepository;
+    }
 
     @Override
     public String getName() {
