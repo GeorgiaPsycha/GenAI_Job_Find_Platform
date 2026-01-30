@@ -13,7 +13,6 @@ const geistSans = Geist({
 });
 
 const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
-const THREAD_ID = null;
 
 export default function Home() {
     const router = useRouter();
@@ -34,12 +33,20 @@ export default function Home() {
 
     // Chat States
     const [message, setMessage] = useState("");
+
+    // --- ΔΙΟΡΘΩΣΗ: Προσθήκη του activeThreadId ---
+    const [activeThreadId, setActiveThreadId] = useState(null);
+    // -------------------------------------------
+
     const [history, setHistory] = useState([
         {
             id: "1",
             author: "System",
             userId: "agent",
-            text: "Γεια σου! Είμαι ο προσωπικός σου σύμβουλος καριέρας. Πες μου τι δουλειά ψάχνεις;",
+            text: "Hello! I am your personal career advisor. Upload your resume (CV) or tell me what kind of job you are looking for. Ask me:\n" +
+                "1. \"Find me jobs based on my resume\" -> if you want me to give you a list of potential jobs based on your resume\n" +
+                "2. \"Apply for job x with code x\" -> if you want to apply for a specific job\n" +
+                "3. \"My application\" -> to see all the jobs you have applied for",
             createdAt: new Date().toISOString(),
         },
     ]);
@@ -66,9 +73,7 @@ export default function Home() {
     // Scroll to bottom
     useEffect(() => {
         const node = historyRef.current;
-        if (node) {
-            node.scrollTop = node.scrollHeight;
-        }
+        if (node) { node.scrollTop = node.scrollHeight; }
     }, [history]);
 
     // Fetch Documents
@@ -91,7 +96,6 @@ export default function Home() {
         fetchDocuments();
     }, []);
 
-    // --- 2. FILE UPLOAD LOGIC ---
     // --- 2. UPLOAD LOGIC ---
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -100,16 +104,13 @@ export default function Home() {
         setUploading(true);
         const formData = new FormData();
         formData.append("file", file);
-
-        const token = localStorage.getItem('token'); // Παίρνουμε το token
+        const token = localStorage.getItem('token');
 
         try {
             const uploadRes = await fetch("http://localhost:8080/files/upload", {
                 method: "POST",
                 headers: {
-                    // ΠΡΟΣΟΧΗ: Δεν βάζουμε 'Content-Type': 'multipart/form-data'
-                    // (το βάζει ο browser αυτόματα με το boundary),
-                    // ΑΛΛΑ ΠΡΕΠΕΙ ΝΑ ΒΑΛΟΥΜΕ ΤΟ TOKEN:
+                    // ΠΡΟΣΟΧΗ: Μην βάλεις Content-Type εδώ, το βάζει ο browser (multipart/form-data)
                     "Authorization": `Bearer ${token}`
                 },
                 body: formData,
@@ -118,8 +119,6 @@ export default function Home() {
             if (!uploadRes.ok) throw new Error("Upload failed");
             const data = await uploadRes.json();
             const fileUrl = data.url;
-
-            // ... (το υπόλοιπο code μένει ίδιο) ...
 
             setHistory((prev) => [
                 ...prev,
@@ -134,6 +133,7 @@ export default function Home() {
 
             const systemMsg = `I have uploaded my CV. The file is located at: ${fileUrl}. Please use this for my applications.`;
 
+            // Στέλνουμε μήνυμα για να ενημερωθεί το Thread Context
             const chatRes = await fetch("http://localhost:8080/messages", {
                 method: "POST",
                 headers: {
@@ -142,11 +142,13 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     content: systemMsg,
+                    // Χρησιμοποιούμε το activeThreadId που τώρα ΕΧΕΙ οριστεί
                     thread: activeThreadId ? { id: activeThreadId } : null,
                     account: { id: ACCOUNT_ID },
                 }),
             });
 
+            // Αποθηκεύουμε το Thread ID που επέστρεψε το backend
             if (chatRes.ok) {
                 const chatData = await chatRes.json();
                 if (chatData.thread && chatData.thread.id) {
@@ -162,7 +164,6 @@ export default function Home() {
             if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
-
 
     // --- 3. SEND MESSAGE ---
     const handleSubmit = async (event) => {
@@ -193,7 +194,8 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     content: userMessage,
-                    thread: THREAD_ID ? { id: THREAD_ID } : null,
+                    // Στέλνουμε το ενεργό thread ID
+                    thread: activeThreadId ? { id: activeThreadId } : null,
                     account: { id: ACCOUNT_ID },
                 }),
             });
@@ -207,6 +209,11 @@ export default function Home() {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
+
+            // Αποθήκευση Thread ID αν είναι νέο
+            if (data.thread && data.thread.id) {
+                setActiveThreadId(data.thread.id);
+            }
 
             if (data.message) {
                 setHistory((current) => [
@@ -235,7 +242,7 @@ export default function Home() {
         }
     };
 
-    // Search Logic
+    // ... (Search Logic παραμένει ίδιο) ...
     useEffect(() => {
         if (!searchInput.trim()) {
             if (!semanticSearchInput.trim()) setFilteredItems(documents);
@@ -318,11 +325,9 @@ export default function Home() {
                                             <div className={styles.sidebarItemDescription} style={{fontSize: '0.8em', color: '#666'}}>
                                                 {item.company}
                                             </div>
-                                            {/* --- ΕΔΩ ΕΙΝΑΙ Η ΠΡΟΣΘΗΚΗ ΤΟΥ ID --- */}
                                             <div style={{fontSize: '0.7em', color: '#444', marginTop: '4px', fontFamily: 'monospace'}}>
                                                 ID: {item.id}
                                             </div>
-                                            {/* ---------------------------------- */}
                                         </button>
                                     </li>
                                 ))}
