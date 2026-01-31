@@ -27,26 +27,16 @@ public class ReRankingApiService {
         this.apiKey = apiKey;
     }
 
+    // --- Υπάρχουσες μέθοδοι για το Chat/Search ---
+
     public List<DocumentSection> rerankDocuments(Agent agent, String query, List<DocumentSection> chunks) {
         String url = "https://api.voyageai.com/v1/rerank";
-
         return rerankDocuments(url, agent.getRerankingModel(), query, chunks);
-
     }
 
-    /**
-     *  Rerank documents using the specified model and query.
-     *
-     * @param url
-     * @param model the model to use for reranking
-     * @param query the user's question
-     * @param chunks the list of document sections to rerank
-     * @return the reranked list of document sections
-     */
     public List<DocumentSection> rerankDocuments(String url, String model, String query, List<DocumentSection> chunks) {
         RestTemplate restTemplate = new RestTemplate();
 
-        // 2. Build headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
@@ -68,18 +58,14 @@ public class ReRankingApiService {
 
         RerankResponse rerankResponse = response.getBody();
 
-        List<DocumentSection> sortedChunks = sortDocuments(chunks, rerankResponse.getData());
-
-        return sortedChunks;
-
+        // Χρησιμοποιούμε το getData() που υπάρχει στο DTO σου
+        return sortDocuments(chunks, rerankResponse.getData());
     }
-
 
     public List<DocumentSection> sortDocuments(
             List<DocumentSection> originalDocuments,
             List<RerankResponse.RerankResult> rerankResults
     ) {
-
         List<DocumentSection> sorted = new ArrayList<>(rerankResults.size());
 
         for (RerankResponse.RerankResult result : rerankResults) {
@@ -90,11 +76,34 @@ public class ReRankingApiService {
                         "Invalid document index returned by rerank API: " + originalIndex
                 );
             }
-
             sorted.add(originalDocuments.get(originalIndex));
         }
-
         return sorted;
+    }
+
+    // --- ΝΕΑ ΜΕΘΟΔΟΣ ΓΙΑ ΤΟ ADMIN AI (Πρόσθεσε αυτό!) ---
+    public RerankResponse rerank(String query, List<String> documents, int topK) {
+        String url = "https://api.voyageai.com/v1/rerank";
+        String model = "rerank-2-lite"; // Default model
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+
+        // Φτιάχνουμε το Request με τα strings (CVs)
+        RerankRequest rerankRequest = RerankRequest.builder()
+                .model(model)
+                .query(query)
+                .documents(documents)
+                // Σημείωση: Αγνοούμε το topK εδώ γιατί το DTO RerankRequest δεν το έχει,
+                // το API θα επιστρέψει όλα τα αποτελέσματα, που είναι οκ.
+                .build();
+
+        HttpEntity<RerankRequest> request = new HttpEntity<>(rerankRequest, headers);
+
+        // Επιστρέφουμε κατευθείαν το Raw Response για να το χειριστεί ο Controller
+        return restTemplate.postForObject(url, request, RerankResponse.class);
     }
 
 }

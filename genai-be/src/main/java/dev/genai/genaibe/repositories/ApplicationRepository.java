@@ -20,4 +20,6 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     // Έλεγχος αν ο χρήστης έχει κάνει ήδη αίτηση σε αυτή την αγγελία
     Optional<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
+
+    List<Application> findByJob(Document job);
 }
