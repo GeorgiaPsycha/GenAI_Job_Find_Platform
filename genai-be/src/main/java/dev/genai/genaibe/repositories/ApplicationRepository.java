@@ -5,20 +5,19 @@ import dev.genai.genaibe.models.entities.Document;
 import dev.genai.genaibe.models.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ApplicationRepository extends JpaRepository<Application, UUID> {
+public interface  ApplicationRepository extends JpaRepository<Application, UUID> {
 
-    // Βρες όλες τις αιτήσεις για μια συγκεκριμένη αγγελία (για τον Admin)
+    // Admin : Find all the applicants for the specific job
     List<Application> findByJobId(UUID jobId);
     boolean existsByJobAndUser(Document job, User user);
     List<Application> findByUser(User user);
 
-    // Έλεγχος αν ο χρήστης έχει κάνει ήδη αίτηση σε αυτή την αγγελία
+    // Check if the User has already applied to this jobId
     Optional<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
 
     List<Application> findByJob(Document job);

@@ -34,6 +34,7 @@ public class SearchTool implements Tool {
 
     @Override
     public String getDescription() {
+        // when to use this tool
         return "Performs a semantic search on job postings and documents. Use this tool when the user asks to find jobs, search for specific roles, or retrieve information about the company.";
     }
 
@@ -60,12 +61,15 @@ public class SearchTool implements Tool {
 
         logger.info("Executing query: " + query);
 
+        //Vector Search + Re-ranking
+        // just bring the top 5 most relevant result
         List<DocumentSection> relevantSections = documentService.semanticSearch(agent,
                 originalMessage.getAccount().getId(),
                 originalMessage.getContent() ,
                 query,
                 5);
 
+        // make the response AI readable
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("""
                 Results of search:

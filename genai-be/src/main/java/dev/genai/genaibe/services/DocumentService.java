@@ -19,6 +19,7 @@ import java.util.UUID;
 public class DocumentService {
 
 
+
     private final CompletionsApiService completionsApiService;
     private final DocumentRepository documentRepository;
     private final DocumentSectionRepository documentSectionRepository;
@@ -34,12 +35,10 @@ public class DocumentService {
     public Document createDocument(Document document) {
         document.setStatus("active");
         // create document
-        // 2. Save the Parent Document (Job Post)
-        // Προσοχή: Το document πρέπει να έχει account_id από τον Controller
+        // Save the Parent Document (Job Post)
         document = documentRepository.save(document);
 
-        // 3. Prepare Content for Indexing (Job Description + Metadata)
-        // Συνδυάζουμε τα πεδία για να "καταλαβαίνει" το AI και την τοποθεσία/εταιρεία
+        //Prepare Content for Indexing (Job Description + Metadata)
         String contentToIndex = String.format(
                 "Title: %s\nCompany: %s\nLocation: %s\nSeniority: %s\n\nDescription:\n%s",
                 document.getTitle(),
@@ -60,7 +59,6 @@ public class DocumentService {
 
         List<String> sections = splitContentIntoSections(content, 500);
 
-        // TODO get the agent form the DB
         Agent agent = new Agent();
         agent.setBehavior("""
                 You are a DB Admin, this is a Postgres DB, users will ask you stuff, and you will run as many queries as needed in the DB to achive the goal. You dont know the schema, run queries to find it.
@@ -79,16 +77,15 @@ public class DocumentService {
             MessageDTO message = new MessageDTO();
             message.setRole("user");
             message.setContent(section);
-            // Κλήση στο OpenAI για Embedding
-            // (Βεβαιώσου ότι στο application.properties έχεις βάλει το llms.openai.key)
+            // call for  Embedding
             EmbeddingResponse embeddingResponse = completionsApiService.getEmbedding(agent, message);
 
-            // Αποθήκευση του Section με το Vector
+            // Save Section with Vector
             DocumentSection documentSection = new DocumentSection();
             documentSection.setDocument(document);
             documentSection.setSectionIndex(i++);
             documentSection.setContent(section);
-// Παίρνουμε το vector από το response
+            //take the vector from response
             if (embeddingResponse != null && !embeddingResponse.getData().isEmpty()) {
                 documentSection.setEmbedding(embeddingResponse.getData().get(0).getEmbedding());
             }
@@ -103,7 +100,6 @@ public class DocumentService {
     public List<DocumentSection> vectorSearch(String question, UUID accountId, int topK) {
 
 
-        // TODO get the agent form the DB
         Agent agent = getDefaultAgent();
 
         MessageDTO message = new MessageDTO();
@@ -116,9 +112,8 @@ public class DocumentService {
         return documentSectionRepository.vectorSearch(embeddingResponse.getData().getFirst().getEmbedding().toString(), accountId, topK);
     }
 
-    /**
+    /*
      * Splits the content into sections; each section has at most {@code wordLimit} words.
-     *
      * @param content   the text to split
      * @param wordLimit maximum number of words per section (must be > 0)
      * @return a list of sections, each containing up to {@code wordLimit} words
@@ -144,7 +139,6 @@ public class DocumentService {
             } else if (wordCount < wordLimit) {
                 currentSection.append(' ').append(word);
             } else {
-                // wordCount == wordLimit → close current section and start a new one
                 sections.add(currentSection.toString());
                 currentSection.setLength(0);
                 currentSection.append(word);
@@ -152,7 +146,6 @@ public class DocumentService {
             }
             wordCount++;
 
-            // If we just filled the section, we'll push it on next iteration or after the loop.
             if (wordCount == wordLimit) {
                 sections.add(currentSection.toString());
                 currentSection.setLength(0);

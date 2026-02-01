@@ -3,10 +3,7 @@ package dev.genai.genaibe.models.dtos.completions;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.genai.genaibe.models.entities.DocumentSection;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,33 +28,13 @@ public class MessageDTO {
 
 
     public static class ToolCall {
+        @Setter
+        @Getter
         private String id;
         private String type;
+        @Getter
         private FunctionCall function;
 
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public FunctionCall getFunction() {
-            return function;
-        }
-
-        public void setFunction(FunctionCall function) {
-            this.function = function;
-        }
     }
 
     public static class FunctionCall {

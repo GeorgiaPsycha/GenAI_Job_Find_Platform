@@ -6,7 +6,6 @@ import dev.genai.genaibe.services.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController
@@ -21,6 +20,7 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
+    // Check if the email exists as a person in the DB
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -32,7 +32,7 @@ public class AuthController {
         String actualRole = (user.getRole() != null) ? user.getRole() : "user";
 
         if (!actualRole.equalsIgnoreCase(requestedRole)) {
-            // Επιστρέφουμε 403 Forbidden ή 401 Unauthorized
+            // return error if the person is trying to enter "wrong" role
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Access Denied: Incorrect role selected for this email."));
         }

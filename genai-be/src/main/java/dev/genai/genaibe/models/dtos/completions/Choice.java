@@ -12,7 +12,6 @@ public class Choice {
     private int index;
     private MessageDTO message;
     private Object logprobs;
-
     @JsonProperty("finish_reason")
     private String finishReason;
 }

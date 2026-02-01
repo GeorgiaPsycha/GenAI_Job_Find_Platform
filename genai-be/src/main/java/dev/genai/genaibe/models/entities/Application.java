@@ -9,13 +9,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "application", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "job_id"}) // Ένας χρήστης, μία αίτηση ανά αγγελία
+        @UniqueConstraint(columnNames = {"user_id", "job_id"}) // One user one apply to every job posts
 })
 @Data
 @AllArgsConstructor
@@ -27,16 +26,16 @@ public class Application {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    // Ποιος έκανε την αίτηση
+    // which user made an apply
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // Για ποια αγγελία (Document)
+    // For which Job
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "job_id", nullable = false) // Προσοχή: Στη βάση λέγεται job_id, αλλά δείχνει στο document
+    @JoinColumn(name = "job_id", nullable = false)
     private Document job;
 
     @Column(name = "cv_file_url", length = Integer.MAX_VALUE)

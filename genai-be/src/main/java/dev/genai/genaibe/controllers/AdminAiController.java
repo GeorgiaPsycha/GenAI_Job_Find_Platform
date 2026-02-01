@@ -1,8 +1,7 @@
 package dev.genai.genaibe.controllers;
 
-// Προσοχή στα σωστά imports!
 import dev.genai.genaibe.models.dtos.completions.voyageai.RerankResponse;
-import dev.genai.genaibe.models.dtos.completions.voyageai.RerankResponse.RerankResult; // <--- ΣΩΣΤΟ IMPORT
+import dev.genai.genaibe.models.dtos.completions.voyageai.RerankResponse.RerankResult;
 import dev.genai.genaibe.models.entities.Application;
 import dev.genai.genaibe.models.entities.Document;
 import dev.genai.genaibe.models.entities.User;
@@ -23,6 +22,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class AdminAiController {
+    // Admin dashboard
 
     private final DocumentRepository documentRepository;
     private final ApplicationRepository applicationRepository;
@@ -30,6 +30,7 @@ public class AdminAiController {
     private final ReRankingApiService reRankingApiService;
     private final JwtService jwtService;
 
+    // find all the jobs the admin has created
     @GetMapping("/my-jobs")
     public ResponseEntity<?> getMyJobs(@RequestHeader("Authorization") String authHeader) {
         User admin = getUserFromToken(authHeader);
@@ -37,6 +38,7 @@ public class AdminAiController {
         return ResponseEntity.ok(myJobs);
     }
 
+    // reranking model to find the best candidate fit for the job
     @PostMapping("/job/{jobId}/rank-candidates")
     public ResponseEntity<?> rankCandidates(
             @PathVariable UUID jobId,
@@ -58,36 +60,25 @@ public class AdminAiController {
 
         for (Application app : applications) {
             String text = app.getCvContentText();
-            // Αν είναι null, βάζουμε το motivation ως fallback για να μην χαθεί ο υποψήφιος
+            //if the description in teh cv is null we take the motivation text he sent with the application
             if (text == null || text.isBlank()) {
                 text = app.getMotivationText();
             }
-
             if (text != null && !text.isBlank()) {
                 cvTexts.add(text);
                 validApplications.add(app);
             }
         }
-
         if (cvTexts.isEmpty()) {
             return ResponseEntity.ok(applications);
         }
-
-        // Κλήση στο API (χρησιμοποιώντας τη νέα μέθοδο που φτιάξαμε)
         RerankResponse response = reRankingApiService.rerank(job.getBody(), cvTexts, cvTexts.size());
-
         List<Map<String, Object>> rankedResults = new ArrayList<>();
-
-        // ΔΙΟΡΘΩΣΗ: Χρήση getData() αντί για getResults()
         if (response != null && response.getData() != null) {
             for (RerankResult result : response.getData()) {
-
-                // ΔΙΟΡΘΩΣΗ: Χρήση getIndex() και getRelevanceScore()
                 int originalIndex = result.getIndex();
                 double score = result.getRelevanceScore();
-
                 Application app = validApplications.get(originalIndex);
-
                 Map<String, Object> dto = new HashMap<>();
                 dto.put("applicationId", app.getId());
                 dto.put("candidateName", app.getUser().getDisplayName());
@@ -96,14 +87,11 @@ public class AdminAiController {
                 dto.put("motivation", app.getMotivationText());
                 dto.put("status", app.getStatus());
                 dto.put("appliedAt", app.getCreatedAt());
-
                 rankedResults.add(dto);
             }
         }
-
-        // Ταξινόμηση ξανά για σιγουριά (descending score)
+        // rerank the result based on the score
         rankedResults.sort((a, b) -> Double.compare((double) b.get("score"), (double) a.get("score")));
-
         return ResponseEntity.ok(rankedResults);
     }
 

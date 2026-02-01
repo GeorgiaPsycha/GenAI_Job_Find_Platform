@@ -25,24 +25,24 @@ public class MessageController {
 
     @PostMapping("/messages")
     public CompletionResponseDTO postMessage(
-            @RequestHeader("Authorization") String authHeader, // 1. Διαβάζουμε το Header
+            @RequestHeader("Authorization") String authHeader, // Read the Header
             @RequestBody ChatMessage message
     ) throws Exception {
 
-        // 2. Εξαγωγή του Token (βγάζουμε το "Bearer ")
+        // Extract the Token
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new RuntimeException("Missing or invalid Authorization header");
         }
         String token = authHeader.substring(7);
 
-        // 3. Βρίσκουμε το User ID από το Token
+        // Take the USERid from the token
         String userIdStr = jwtService.extractUserId(token);
 
-        // 4. Φέρνουμε τον User από τη βάση
+        // Bring the user from the DB
         User user = userRepository.findById(UUID.fromString(userIdStr))
                 .orElseThrow(() -> new RuntimeException("User from token not found"));
 
-        // 5. Καρφώνουμε τον ΣΩΣΤΟ χρήστη στο μήνυμα
+        // Combine the User with the message
         message.setUser(user);
 
         return chatMessageService.createMessage(message);

@@ -21,13 +21,6 @@ public class GenAiException extends RuntimeException {
         this.errorMessage = errorMessage;
     }
 
-    public GenAiException(HttpStatus status, String errorCode, String errorMessage, Throwable cause) {
-        super(errorMessage, cause);
-        this.status = status;
-        this.errorCode = errorCode;
-        this.errorMessage = errorMessage;
-    }
-
     public GenAiException(String userNotFound) {
         this.errorMessage = "User not found";
         this.status = HttpStatus.NOT_FOUND;

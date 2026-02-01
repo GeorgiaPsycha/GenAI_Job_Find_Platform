@@ -9,7 +9,6 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +26,7 @@ public class FileUploadController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
 
-    // Constructor Injection
+    //Constructor Injection
     public FileUploadController(UserRepository userRepository, JwtService jwtService) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -39,7 +38,7 @@ public class FileUploadController {
             @RequestHeader(value = "Authorization", required = false) String authHeader
     ) {
         try {
-            // 1. Basic File Save Logic (Keep existing)
+            // Upload the file with a unique UUID
             Path uploadPath = Paths.get(UPLOAD_DIR);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
@@ -51,7 +50,7 @@ public class FileUploadController {
             Files.copy(file.getInputStream(), filePath);
             String fileUrl = "/uploads/" + filename;
 
-            // 2. EXTRACT TEXT & SAVE TO DB (New Logic)
+            // Check if the user is connected
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 try {
                     String token = authHeader.substring(7);
@@ -60,30 +59,26 @@ public class FileUploadController {
                     User user = userRepository.findById(UUID.fromString(userId))
                             .orElseThrow(() -> new RuntimeException("User not found"));
 
-                    // Check if it is a Candidate (USER)
-                    // (Using equalsIgnoreCase to handle "user" or "USER")
-                    if ("user".equalsIgnoreCase(user.getRole())) {
+                    //Check if the role is USER to save the PDF
+                    if ("USER".equalsIgnoreCase(user.getRole())) {
 
-                        // Parse PDF to Text
+                        // Convert the PDF to StringText
                         String extractedText = extractTextFromPdf(filePath);
 
                         // Update User in DB
                         user.setCv_text(extractedText);
                         userRepository.save(user);
 
-                        log.info("✅ CV Text saved for user: {}", user.getEmail());
+                        log.info("CV Text saved for user: {}", user.getEmail());
                     } else {
-                        System.out.println("ℹ️ User is ADMIN/RECRUITER. CV text not saved.");
+                        log.info("ℹUser is ADMIN/RECRUITER. CV text not saved.");
                     }
 
                 } catch (Exception e) {
-                    System.err.println("⚠️ Warning: Failed to extract/save CV text: " + e.getMessage());
-                    // We don't fail the request, just log the warning
+                    log.error(" Warning: Failed to extract/save CV text: {}", e.getMessage());
                 }
             }
-
             return ResponseEntity.ok(Map.of("url", fileUrl));
-
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Failed to upload file");
         }
@@ -95,7 +90,7 @@ public class FileUploadController {
             if (!document.isEncrypted()) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 String text = stripper.getText(document);
-                // Limit text length to avoid database errors (optional, e.g., 5000 chars)
+                // Limit text length to avoid DB crash
                 return text.length() > 10000 ? text.substring(0, 10000) : text;
             }
         } catch (IOException e) {

@@ -29,35 +29,30 @@ public class AgentService {
     Logger logger = LoggerFactory.getLogger(AgentService.class);
 
     private final Map<String, Tool> toolExecutionMap;
-    private final List<JsonNode> toolsDefinitions; // Η λίστα που στέλνουμε στο LLM
+    private final List<JsonNode> toolsDefinitions; // The list of tools we send to the LLM
 
     @Autowired
     public AgentService(CompletionsApiService completionsApiService,
                         ObjectMapper objectMapper,
-                        List<Tool> toolsList) { // Spring automatically injects all beans implementing Tool
+                        List<Tool> toolsList) {
         this.completionsApiService = completionsApiService;
         this.objectMapper = objectMapper;
         this.toolsDefinitions = new ArrayList<>();
-
-        // 1. Δημιουργία του Execution Map (Όνομα -> Tool Instance)
         this.toolExecutionMap = toolsList.stream()
                 .collect(Collectors.toMap(Tool::getName, Function.identity()));
 
-        // 2. ΔΥΝΑΜΙΚΗ ΚΑΤΑΣΚΕΥΗ ΤΩΝ DEFINITIONS (Χωρίς hardcoded strings!)
-        // Διαβάζουμε το όνομα, description και parameters από κάθε Tool class
+        // For every tool in the tool.class we take the name , the definition,parameters
         for (Tool tool : toolsList) {
             try {
                 ObjectNode functionNode = objectMapper.createObjectNode();
                 functionNode.put("name", tool.getName());
                 functionNode.put("description", tool.getDescription());
-                // Το getParameters επιστρέφει String JSON, το κάνουμε parse σε JsonNode
+                // JSON--> parse σε JsonNode
                 JsonNode paramsNode = objectMapper.readTree(tool.getParameters());
                 functionNode.set("parameters", paramsNode);
-
                 ObjectNode toolNode = objectMapper.createObjectNode();
                 toolNode.put("type", "function");
                 toolNode.set("function", functionNode);
-
                 this.toolsDefinitions.add(toolNode);
                 logger.info("Registered Tool: {}", tool.getName());
             } catch (Exception e) {
@@ -68,7 +63,7 @@ public class AgentService {
 
     public MessageDTO processMessage(ChatMessage message) {
         logger.info("=== Start Processing Message: '{}' ===", message.getContent());
-        // Setup Agent (Hardcoded for demo, normally from DB)
+        // Set the behavior of the Agent
         Agent agent = new Agent();
         agent.setBehavior("""
                 You are a smart AI Career Recruiter.
@@ -79,23 +74,21 @@ public class AgentService {
                 4. MY APPS: Use 'get_my_applications' if user asks about their applications.
                 5. RESPONSE: After using a tool, always summarize the result to the user in a friendly, human-readable text.
                 """);
+        // define the models that we use
         agent.setLlmModel("llama3.2");
         agent.setRerankingModel("rerank-2.5-lite");
         agent.setTemperature(0.7);
         agent.setMaxTokens(5000);
-
-        // --- CV CONTEXT INJECTION (Το ζήτησες πριν) ---
-        // Ελέγχουμε αν ο χρήστης έχει ανεβάσει βιογραφικό και το προσθέτουμε στο context
         User user = message.getUser();
         String systemPrompt = agent.getBehavior();
+        // check if the user has upload a CV so we can give personalised answers
         if (user != null && user.getCv_text() != null && !user.getCv_text().isEmpty()) {
             systemPrompt += "\n\nUSER CONTEXT:\nThe user has uploaded a CV with the following content. If they ask to find jobs 'based on my cv', use skills/keywords from here for the search tool:\n" + user.getCv_text();
-            // Ενημερώνουμε προσωρινά το prompt για αυτό το request
+            // add the personalized user info in the agen behavior
             agent.setBehavior(systemPrompt);
         }
-        // ----------------------------------------------
 
-        // Ετοιμασία Ιστορικού
+        // Keep message history
         List<MessageDTO> conversationHistory = new ArrayList<>();
         conversationHistory.add(MessageDTO.builder()
                 .role("user")
@@ -105,14 +98,13 @@ public class AgentService {
         ChatCompletionResponse response;
         int counter = 0;
         List<DocumentSection> supportingDocuments = new ArrayList<>();
-
+        // agent can call and thing using tools for 5 times
         do {
             logger.info("--- Loop Iteration: {} ---", counter + 1);
             // Κλήση στο LLM (στέλνουμε τα δυναμικά definitions)
             response = completionsApiService.getCompletion(agent, conversationHistory, this.toolsDefinitions);
             MessageDTO responseMessage = response.getChoices().getLast().getMessage();
-
-            // Προσθήκη απάντησης στο ιστορικό
+            // add the answear to the chat history
             conversationHistory.add(responseMessage);
 
             // Έλεγχος για Tool Calls

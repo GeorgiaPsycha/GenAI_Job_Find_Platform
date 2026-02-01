@@ -18,8 +18,6 @@ public class EmbeddingResponse {
     private List<EmbeddingData> data;
     private Usage usage;
 
-
-
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

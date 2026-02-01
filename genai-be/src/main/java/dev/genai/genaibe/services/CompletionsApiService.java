@@ -28,10 +28,12 @@ public class CompletionsApiService {
         this.apiKey = apiKey;
     }
 
+    //to create the answer of the LLM / using ollama
     public ChatCompletionResponse getCompletion(Agent agent, List<MessageDTO> messages, List<JsonNode> tools) {
         String url = "http://localhost:11434/v1/chat/completions";
         return getCompletion(url, agent.getLlmModel(), messages, agent.getTemperature(), agent.getMaxTokens(), agent.getBehavior(), tools);
     }
+    // to convert the text into an Embedding
     public EmbeddingResponse getEmbedding(Agent agent, MessageDTO messages) {
         String url = "http://localhost:11434/v1/embeddings";
         return this.getEmbedding(url, agent.getEmbeddingsModel(), messages);
@@ -40,7 +42,7 @@ public class CompletionsApiService {
     public ChatCompletionResponse getCompletion(String url, String model, List<MessageDTO> messages, Double temperature, Integer maxTokens, String systemPrompt, List<JsonNode> tools) {
         RestTemplate restTemplate = new RestTemplate();
 
-        // 2. Build headers
+        //  Build headers for AUTH
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
@@ -53,7 +55,7 @@ public class CompletionsApiService {
                 .toolChoice("auto")
                 .tools(tools)
                 .build();
-
+    // add the system promt / the agent behavior
         requestBody.getMessages().add(MessageDTO.builder()
                 .role("system")
                 .content(systemPrompt)
@@ -82,7 +84,7 @@ public class CompletionsApiService {
 
         RestTemplate restTemplate = new RestTemplate();
 
-        // 2. Build headers
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);

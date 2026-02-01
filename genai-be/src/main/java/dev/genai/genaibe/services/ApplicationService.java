@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Service
 public class ApplicationService {
-
+    // the official apply of a user in a Job
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
@@ -28,28 +28,25 @@ public class ApplicationService {
     }
 
     public Application applyForJob(UUID userId, UUID jobId, String motivationText) {
-        // 1. Έλεγχος αν υπάρχει ο χρήστης
+        // Check if teh User exists
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GenAiException("User not found"));
 
-        // 2. Έλεγχος αν υπάρχει η αγγελία
+        // Chck if this JobId exists
         Document job = documentRepository.findById(jobId)
                 .orElseThrow(() -> new GenAiException("Job not found"));
 
-        // 3. Έλεγχος αν έχει ήδη κάνει αίτηση
+        // Check if the user has already aplly for this job
         if (applicationRepository.findByUserIdAndJobId(userId, jobId).isPresent()) {
             throw new GenAiException("User has already applied to this job");
         }
 
-        // 4. Δημιουργία της αίτησης
+        // Create the new application
         Application application = new Application();
         application.setUser(user);
         application.setJob(job);
         application.setMotivationText(motivationText);
         application.setStatus("APPLIED");
-
-        // (Προαιρετικά: Εδώ θα μπορούσαμε να τραβήξουμε το CV του χρήστη και να το αποθηκεύσουμε)
-        // application.setCvContentText(...)
 
         return applicationRepository.save(application);
     }

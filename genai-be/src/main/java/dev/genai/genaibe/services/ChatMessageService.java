@@ -16,11 +16,11 @@ import java.time.Instant;
 public class ChatMessageService {
 
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatThreadRepository chatThreadRepository; // <--- Νέο πεδίο
+    private final ChatThreadRepository chatThreadRepository;
     private final CompletionsApiService completionsApiService;
     private final AgentService agentService;
 
-    // Προσθέτουμε το chatThreadRepository στον Constructor
+    // add chatThreadRepository into the Constructor
     public ChatMessageService(ChatMessageRepository chatMessageRepository,
                               ChatThreadRepository chatThreadRepository,
                               CompletionsApiService completionsApiService,
@@ -31,18 +31,17 @@ public class ChatMessageService {
         this.agentService = agentService;
     }
 
-    @Transactional // Σημαντικό: Όλα γίνονται σε μία συναλλαγή
+    @Transactional
     public CompletionResponseDTO createMessage(ChatMessage message) throws Exception {
 
-        // --- ΛΥΣΗ ΓΙΑ ΤΟ NULL THREAD ---
-        // Ελέγχουμε αν το Frontend έστειλε null ή άδειο thread
+        // Check if the Fe send a null or empty Thread
         if (message.getThread() == null || message.getThread().getId() == null) {
 
-            // 1. Δημιουργούμε νέο αντικείμενο Thread
+            //Create a new Thread
             ChatThread newThread = new ChatThread();
-            newThread.setAccount(message.getAccount()); // Συνδέουμε με το Account
+            newThread.setAccount(message.getAccount()); // coonect to the specific account
 
-            // 2. Βάζουμε έναν τίτλο (π.χ. τις πρώτες 30 λέξεις του μηνύματος)
+            // The tittle of the chat
             String userContent = message.getContent();
             String title = userContent.length() > 30 ? userContent.substring(0, 30) + "..." : userContent;
             newThread.setTitle(title);
@@ -52,10 +51,9 @@ public class ChatMessageService {
             newThread.setCreatedAt(now);
             newThread.setUpdatedAt(now);
 
-            // 3. Αποθηκεύουμε το Thread στη βάση ΠΡΙΝ το μήνυμα
+            // Save the Thread in the DB
             newThread = chatThreadRepository.save(newThread);
 
-            // 4. Συνδέουμε το μήνυμα με το νέο Thread
             message.setThread(newThread);
         }
 
@@ -65,15 +63,12 @@ public class ChatMessageService {
             message.setCreatedAt(Instant.now());
         }
 
-        // Τώρα η αποθήκευση θα πετύχει γιατί το thread_id υπάρχει!
         message = chatMessageRepository.save(message);
-
-        // Στέλνουμε το μήνυμα στον Agent
         MessageDTO response = agentService.processMessage(message);
 
-        // Αποθηκεύουμε την απάντηση του Agent
+        // Save the Agent message
         ChatMessage responseMessage = new ChatMessage();
-        responseMessage.setThread(message.getThread()); // Χρησιμοποιούμε το ίδιο thread
+        responseMessage.setThread(message.getThread());
         responseMessage.setAccount(message.getAccount());
         responseMessage.setSenderType("agent");
         responseMessage.setContent(response.getContent());

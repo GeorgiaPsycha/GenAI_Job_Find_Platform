@@ -27,8 +27,7 @@ public class ReRankingApiService {
         this.apiKey = apiKey;
     }
 
-    // --- Υπάρχουσες μέθοδοι για το Chat/Search ---
-
+    // connect with VoyageAI to rank the results from the DB
     public List<DocumentSection> rerankDocuments(Agent agent, String query, List<DocumentSection> chunks) {
         String url = "https://api.voyageai.com/v1/rerank";
         return rerankDocuments(url, agent.getRerankingModel(), query, chunks);
@@ -40,7 +39,7 @@ public class ReRankingApiService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
-
+        // the request for Voyage AI
         RerankRequest rerankRequest = RerankRequest.builder()
                 .model(model)
                 .query(query)
@@ -48,6 +47,7 @@ public class ReRankingApiService {
                 .build();
 
         logger.debug("Request body: {}", rerankRequest);
+        // call HTTP POST
         HttpEntity<RerankRequest> request = new HttpEntity<>(rerankRequest, headers);
         ResponseEntity<RerankResponse> response = restTemplate.postForEntity(
                 url,
@@ -58,7 +58,7 @@ public class ReRankingApiService {
 
         RerankResponse rerankResponse = response.getBody();
 
-        // Χρησιμοποιούμε το getData() που υπάρχει στο DTO σου
+        //sorts the docs based on AI score
         return sortDocuments(chunks, rerankResponse.getData());
     }
 
@@ -81,10 +81,10 @@ public class ReRankingApiService {
         return sorted;
     }
 
-    // --- ΝΕΑ ΜΕΘΟΔΟΣ ΓΙΑ ΤΟ ADMIN AI (Πρόσθεσε αυτό!) ---
+    // Admin : compare the job description with the cv of the applicants to find the best fit
     public RerankResponse rerank(String query, List<String> documents, int topK) {
         String url = "https://api.voyageai.com/v1/rerank";
-        String model = "rerank-2-lite"; // Default model
+        String model = "rerank-2-lite";
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -96,13 +96,10 @@ public class ReRankingApiService {
                 .model(model)
                 .query(query)
                 .documents(documents)
-                // Σημείωση: Αγνοούμε το topK εδώ γιατί το DTO RerankRequest δεν το έχει,
-                // το API θα επιστρέψει όλα τα αποτελέσματα, που είναι οκ.
                 .build();
 
         HttpEntity<RerankRequest> request = new HttpEntity<>(rerankRequest, headers);
 
-        // Επιστρέφουμε κατευθείαν το Raw Response για να το χειριστεί ο Controller
         return restTemplate.postForObject(url, request, RerankResponse.class);
     }
 

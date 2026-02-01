@@ -3,7 +3,6 @@ package dev.genai.genaibe.models.entities;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.*;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

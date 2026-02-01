@@ -20,6 +20,7 @@ public class UserController {
         this.userService = userService;
     }
 
+    // Bring all the details about the user based on the UserId from the DB
     @GetMapping("/users/{id}")
     public User getUserById(@PathVariable UUID id) throws Exception {
         return userService.getUserById(id);

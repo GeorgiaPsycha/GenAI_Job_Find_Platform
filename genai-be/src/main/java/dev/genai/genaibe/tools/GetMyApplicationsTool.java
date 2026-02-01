@@ -8,7 +8,6 @@ import dev.genai.genaibe.repositories.ApplicationRepository;
 import dev.genai.genaibe.repositories.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -40,7 +39,7 @@ public class GetMyApplicationsTool implements Tool {
 
     @Override
     public String getParameters() {
-        // Επιστρέφουμε JSON Schema για τις παραμέτρους (εδώ είναι κενό γιατί δεν θέλει input)
+        // is null beacuse it is not need imput
         return """
             {
                 "type": "object",
@@ -54,33 +53,33 @@ public class GetMyApplicationsTool implements Tool {
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage message) throws Exception {
         log.info("--- Executing GetMyApplicationsTool ---");
 
-        // 1. Βρες τον χρήστη
+        // Find me the user
         User user = message.getUser();
-        // Fallback για testing (αν είσαι σε dev mode και δεν βρέθηκε user)
         if (user == null) {
-            user = userRepository.findByEmail("chris@mailinator.com").orElse(null);
+            user = userRepository.findByEmail("penelope@gmail.com").orElse(null);
         }
 
         if (user == null) {
             return MessageDTO.builder().role("tool").content("Error: Could not identify the user.").build();
         }
 
-        // 2. Βρες τις αιτήσεις
+        // Fid all the applications
         List<Application> apps = applicationRepository.findByUser(user);
 
         if (apps.isEmpty()) {
             return MessageDTO.builder().role("tool").content("You have not applied to any jobs yet.").build();
         }
 
-        // 3. Φτιάξε μια λίστα κειμένου για το LLM
+        // the list for the LLM
         String report = apps.stream()
                 .map(app -> String.format("- Job: %s (Company: %s) | Status: %s | Date: %s",
                         app.getJob().getTitle(),
                         app.getJob().getCompany(),
                         app.getStatus(),
-                        app.getCreatedAt().toString().substring(0, 10))) // Μόνο η ημερομηνία
+                        app.getCreatedAt().toString().substring(0, 10)))
                 .collect(Collectors.joining("\n"));
 
+        // return the list to Agent loop
         return MessageDTO.builder()
                 .role("tool")
                 .content("Here are your applications:\n" + report)

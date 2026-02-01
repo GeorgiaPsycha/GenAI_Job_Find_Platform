@@ -34,7 +34,7 @@ public class SqlRunnerTool implements Tool {
 
     @Override
     public String getParameters() {
-        // Εδώ περιγράφουμε στο LLM ότι περιμένουμε ένα πεδίο "query"
+        // Tell the LLM that its waiting for a query
         return """
             {
                 "type": "object",
@@ -56,20 +56,20 @@ public class SqlRunnerTool implements Tool {
         String query = arguments.get("query").asText();
 
         logger.info("Executing query: " + query);
-
+        // run the query in the DB
         String result = jdbcTemplate.query(query, rs -> {
             StringBuilder sb = new StringBuilder();
             java.sql.ResultSetMetaData meta = rs.getMetaData();
             int columnCount = meta.getColumnCount();
 
-            // (optional) header row with column names
+            // header row with column names
             for (int i = 1; i <= columnCount; i++) {
                 if (i > 1) sb.append(",");
                 sb.append(meta.getColumnLabel(i));
             }
             sb.append("\n");
 
-            // data rows
+            // convert the text into CSV format
             while (rs.next()) {
                 for (int i = 1; i <= columnCount; i++) {
                     if (i > 1) sb.append(",");

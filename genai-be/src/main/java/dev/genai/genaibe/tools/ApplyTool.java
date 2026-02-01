@@ -9,7 +9,7 @@ import dev.genai.genaibe.models.entities.User;
 import dev.genai.genaibe.repositories.ApplicationRepository;
 import dev.genai.genaibe.repositories.DocumentRepository;
 import dev.genai.genaibe.repositories.UserRepository;
-import dev.genai.genaibe.services.ApplicationService;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,13 +20,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Component
+@Slf4j
 public class ApplyTool implements Tool {
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
-    private final Logger logger = LoggerFactory.getLogger(ApplyTool.class);
 
     public ApplyTool(ApplicationRepository applicationRepository,
                      DocumentRepository documentRepository,
@@ -37,7 +37,7 @@ public class ApplyTool implements Tool {
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
-
+    // the name of the tool that the LLM understands
     @Override
     public String getName() {
         return "apply_to_job";
@@ -48,6 +48,7 @@ public class ApplyTool implements Tool {
         return "Applies to a job posting on behalf of the user. Requires the job_id and a short motivation letter.";
     }
 
+    //the parameters
     @Override
     public String getParameters() {
         // JSON Schema για το LLM
@@ -73,7 +74,7 @@ public class ApplyTool implements Tool {
     public MessageDTO execute(MessageDTO.ToolCall toolCall, Agent agent, ChatMessage message) throws Exception {
         JsonNode arguments = objectMapper.readTree(toolCall.getFunction().getArguments());
 
-        // 1. Διάβασμα παραμέτρων (με ασφάλεια για null)
+        // Read the parameters
         String jobIdStr = arguments.path("job_id").asText(null);
         String motivation = arguments.path("motivation").asText("I am very interested in this position.");
         String cvFileUrl = arguments.path("cv_file_url").asText(null);
@@ -82,42 +83,38 @@ public class ApplyTool implements Tool {
             return MessageDTO.builder().role("tool").content("Error: Job ID was not provided.").build();
         }
 
-        // 2. Εύρεση Job
+        // Bring the data from the repository
         Document job = documentRepository.findById(UUID.fromString(jobIdStr))
                 .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobIdStr));
 
-        // 3. Εύρεση User
+        // Find User
         User applicant = message.getUser();
         if (applicant == null) {
-            // Fallback για testing (αν χρειάζεται)
-            applicant = userRepository.findByEmail("chris@mailinator.com").orElse(null);
+            applicant = userRepository.findByEmail("zeta@gmail.com").orElse(null);
         }
 
         if (applicant == null) {
             return MessageDTO.builder().role("tool").content("Error: Could not identify the user applying.").build();
         }
 
-        // --- ΑΛΛΑΓΗ ΓΙΑ DUPLICATE ---
-        // 4. Έλεγχος αν έχει ήδη κάνει αίτηση
+       // check if the user ALREADY applt
         boolean alreadyApplied = applicationRepository.existsByJobAndUser(job, applicant);
         if (alreadyApplied) {
-            // Επιστρέφουμε μήνυμα επιτυχίας/ενημέρωσης ΧΩΡΙΣ να κάνουμε save
             return MessageDTO.builder()
                     .role("tool")
                     .content(String.format("You have already applied for the position '%s'. No new application was created.", job.getTitle()))
                     .build();
         }
 
-        // 5. Δημιουργία Application
+        // Create new application
         Application app = new Application();
         app.setJob(job);
         app.setUser(applicant);
         app.setMotivationText(motivation);
-        app.setCvFileUrl(cvFileUrl); // Αν υπάρχει URL αρχείου
+        app.setCvFileUrl(cvFileUrl);
         app.setStatus("APPLIED");
 
-        // --- ΑΛΛΑΓΗ ΓΙΑ CV TEXT ---
-        // Αντλούμε το κείμενο από το προφίλ του χρήστη (αν υπάρχει) και το βάζουμε στην αίτηση
+       // save in the application the text from the CV for the description of the "desire" for the apply
         if (applicant.getCv_text() != null && !applicant.getCv_text().isEmpty()) {
             app.setCvContentText(applicant.getCv_text());
         }
@@ -125,7 +122,6 @@ public class ApplyTool implements Tool {
         app.setCreatedAt(Instant.now());
         app.setUpdatedAt(Instant.now());
 
-        // 6. Αποθήκευση
         applicationRepository.save(app);
 
         return MessageDTO.builder()

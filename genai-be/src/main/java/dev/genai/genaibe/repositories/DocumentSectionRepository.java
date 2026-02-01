@@ -9,7 +9,10 @@ import java.util.UUID;
 
 public interface DocumentSectionRepository extends JpaRepository<DocumentSection, UUID> {
 
-
+    /* Semantic Serach in the DB using the distace of teh vectors to find the best
+    infomation based on the question of the User
+    @param questionEmbedding : the vector of the user question
+     */
     @Query(nativeQuery = true
     , value = """
         SELECT ds.*

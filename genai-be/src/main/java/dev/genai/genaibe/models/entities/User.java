@@ -29,7 +29,6 @@ public class User {
     @Column(name = "avatar_url", length = Integer.MAX_VALUE)
     private String avatarUrl;
 
-//    @ColumnDefault("'USER'")
     @Column(name = "role", nullable = false)
     private String role;
 
