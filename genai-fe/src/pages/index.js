@@ -27,16 +27,12 @@ export default function Home() {
     const [semanticSearchLoading, setSemanticSearchLoading] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
 
-    // Auth States
     const [currentUserId, setCurrentUserId] = useState(null);
     const [userRole, setUserRole] = useState(null);
 
-    // Chat States
     const [message, setMessage] = useState("");
 
-    // --- ΔΙΟΡΘΩΣΗ: Προσθήκη του activeThreadId ---
     const [activeThreadId, setActiveThreadId] = useState(null);
-    // -------------------------------------------
 
     const [history, setHistory] = useState([
         {
@@ -51,12 +47,10 @@ export default function Home() {
         },
     ]);
 
-    // Upload States
     const fileInputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
     const historyRef = useRef(null);
 
-    // --- 1. AUTH CHECK ---
     useEffect(() => {
         const token = localStorage.getItem('token');
         const storedUserId = localStorage.getItem('userId');
@@ -70,13 +64,11 @@ export default function Home() {
         }
     }, [router]);
 
-    // Scroll to bottom
     useEffect(() => {
         const node = historyRef.current;
         if (node) { node.scrollTop = node.scrollHeight; }
     }, [history]);
 
-    // Fetch Documents
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
@@ -96,7 +88,6 @@ export default function Home() {
         fetchDocuments();
     }, []);
 
-    // --- 2. UPLOAD LOGIC ---
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -110,7 +101,6 @@ export default function Home() {
             const uploadRes = await fetch("http://localhost:8080/files/upload", {
                 method: "POST",
                 headers: {
-                    // ΠΡΟΣΟΧΗ: Μην βάλεις Content-Type εδώ, το βάζει ο browser (multipart/form-data)
                     "Authorization": `Bearer ${token}`
                 },
                 body: formData,
@@ -133,7 +123,6 @@ export default function Home() {
 
             const systemMsg = `I have uploaded my CV. The file is located at: ${fileUrl}. Please use this for my applications.`;
 
-            // Στέλνουμε μήνυμα για να ενημερωθεί το Thread Context
             const chatRes = await fetch("http://localhost:8080/messages", {
                 method: "POST",
                 headers: {
@@ -142,13 +131,11 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     content: systemMsg,
-                    // Χρησιμοποιούμε το activeThreadId που τώρα ΕΧΕΙ οριστεί
                     thread: activeThreadId ? { id: activeThreadId } : null,
                     account: { id: ACCOUNT_ID },
                 }),
             });
 
-            // Αποθηκεύουμε το Thread ID που επέστρεψε το backend
             if (chatRes.ok) {
                 const chatData = await chatRes.json();
                 if (chatData.thread && chatData.thread.id) {
@@ -165,7 +152,6 @@ export default function Home() {
         }
     };
 
-    // --- 3. SEND MESSAGE ---
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!message.trim()) return;
@@ -194,7 +180,6 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     content: userMessage,
-                    // Στέλνουμε το ενεργό thread ID
                     thread: activeThreadId ? { id: activeThreadId } : null,
                     account: { id: ACCOUNT_ID },
                 }),
@@ -210,7 +195,6 @@ export default function Home() {
 
             const data = await response.json();
 
-            // Αποθήκευση Thread ID αν είναι νέο
             if (data.thread && data.thread.id) {
                 setActiveThreadId(data.thread.id);
             }
@@ -242,7 +226,6 @@ export default function Home() {
         }
     };
 
-    // ... (Search Logic παραμένει ίδιο) ...
     useEffect(() => {
         if (!searchInput.trim()) {
             if (!semanticSearchInput.trim()) setFilteredItems(documents);

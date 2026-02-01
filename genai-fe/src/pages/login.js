@@ -4,7 +4,7 @@ import styles from "@/styles/Home.module.css";
 
 export default function Login() {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('user'); // Default ρόλος
+  const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -22,17 +22,15 @@ export default function Login() {
       if (res.ok) {
         const data = await res.json();
         console.log("LOGIN RESPONSE:", data);
-        // Αποθήκευση στο Browser
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('email', data.email);
         localStorage.setItem('role', data.role);
 
-        // Redirect ανάλογα με τον ρόλο (προαιρετικό, τώρα πάνε όλα στο chat)
         if (data.role === 'ADMIN') {
-          await router.push('/admin'); // Οι Recruiters πάνε στο Admin Panel
+          await router.push('/admin');
         } else {
-          await router.push('/'); // Οι Candidates πάνε στο Chat
+          await router.push('/');
         }
       } else {
         const errorData = await res.json();
@@ -44,7 +42,6 @@ export default function Login() {
     }
   };
 
-  // Στυλ για τα κουτιά επιλογής
   const boxStyle = (isSelected) => ({
     flex: 1,
     padding: '15px',

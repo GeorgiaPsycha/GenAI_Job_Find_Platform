@@ -8,7 +8,6 @@ const ACCOUNT_ID = "8c6e55a7-eee6-4c38-b78b-241e3d1b8637";
 export default function Admin() {
     const router = useRouter();
 
-    // States για τη φόρμα
     const [form, setForm] = useState({
         title: '',
         company: '',
@@ -18,7 +17,6 @@ export default function Admin() {
     });
     const [status, setStatus] = useState('');
 
-    // States για το AI Dashboard
     const [myJobs, setMyJobs] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
     const [rankedApplicants, setRankedApplicants] = useState([]);
@@ -26,7 +24,6 @@ export default function Admin() {
 
     const [isMounted, setIsMounted] = useState(false);
 
-    // 1. Initial Load & Auth Check
     useEffect(() => {
         setIsMounted(true);
         const role = localStorage.getItem('role');
@@ -35,12 +32,10 @@ export default function Admin() {
         if (!token || role !== 'ADMIN') {
             router.push('/login');
         } else {
-            // Αν είναι admin, φέρε τα jobs του
             fetchMyJobs(token);
         }
     }, []);
 
-    // 2. Fetch Admin's Jobs
     const fetchMyJobs = async (token) => {
         try {
             const res = await fetch('http://localhost:8080/admin-ai/my-jobs', {
@@ -53,7 +48,6 @@ export default function Admin() {
         } catch (e) { console.error(e); }
     };
 
-    // 3. Post Job Logic
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('Publishing...');
@@ -78,7 +72,7 @@ export default function Admin() {
             if (res.ok) {
                 setStatus('✅ Job Posted Successfully!');
                 setForm({ title: '', company: '', location: '', seniority: '', body: '' });
-                fetchMyJobs(token); // Ανανέωση λίστας
+                fetchMyJobs(token);
             } else {
                 setStatus('❌ Error posting job');
             }
@@ -87,7 +81,6 @@ export default function Admin() {
         }
     };
 
-    // 4. AI Reranking Call
     const handleJobClick = async (job) => {
         setSelectedJob(job);
         setRankedApplicants([]);

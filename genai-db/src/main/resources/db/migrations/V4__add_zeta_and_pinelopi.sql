@@ -13,7 +13,6 @@ WHERE NOT EXISTS (
 );
 
 -- 3. Σύνδεση των νέων χρηστών με το Account "GenAI for Developers"
--- Τους δίνουμε ρόλο 'owner' για να μπορούν να κάνουν τα πάντα (όπως ο Chris)
 INSERT INTO account_user (id, account_id, user_id, role, status)
 SELECT
     uuid_generate_v4(),
